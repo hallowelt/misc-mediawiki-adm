@@ -1,0 +1,225 @@
+<?php
+
+namespace MwAdmin\Cmd\Commands;
+
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Helper\ProgressBar;
+use ZipArchive;
+use Ifsnop\Mysqldump\Mysqldump;
+use MwAdmin\Cmd\SettingsReader;
+use MwAdmin\Cmd\SettingsFileIterator;
+
+class WikiBackup extends Command {
+
+
+	/**
+	 *
+	 * @var Input\InputInterface
+	 */
+	protected $input = null;
+
+	/**
+	 *
+	 * @var OutputInterface
+	 */
+	protected $output = null;
+
+	protected $mediawikiRoot = '.';
+
+	protected $dest = '';
+
+	/**
+	 *
+	 * @var ZipArchive
+	 */
+	protected $zip = null;
+
+	protected function configure() {
+		$this
+			->setName( 'wiki-backup' )
+			->setDescription( 'Creates a ZIP archive containing all necessary data elements' )
+			->setDefinition( new Input\InputDefinition( [
+				new Input\InputOption(
+					'mediawiki-root',
+					null,
+					Input\InputOption::VALUE_OPTIONAL,
+					'Specifies the diretory, which holds the mediawiki codebase',
+					'.'
+				),
+				new Input\InputOption(
+					'dest',
+					null,
+					Input\InputOption::VALUE_OPTIONAL,
+					'Specifies the directory to store the backup file',
+					'.'
+				)
+			] ) );
+
+		return parent::configure();
+	}
+
+	protected function execute( Input\InputInterface $input, OutputInterface $output ) {
+		$this->input = $input;
+		$this->output = $output;
+
+		$this->mediawikiRoot = $input->getOption( 'mediawiki-root' );
+		$this->dest = realpath( $input->getOption( 'dest' ) );
+
+		$this->readInSettingsFile();
+		$this->initZipFile();
+		$this->addSettingsFiles();
+		$this->addImagesFolder();
+		$this->dumpDatabase();
+
+		$this->zip->close();
+		$this->cleanUp();
+
+		$this->output->writeln( '<info>--> Done.</info>' );
+	}
+
+	protected $wikiName = '';
+	protected $dbname = '';
+	protected $dbuser = '';
+	protected $dbpassword = '';
+	protected $dbserver = '';
+	protected $dbprefix = '';
+
+	protected function readInSettingsFile() {
+		$settingsReader = new SettingsReader();
+		$settings = $settingsReader->getSettingsFromDirectory( $this->mediawikiRoot );
+
+		$requiredFields = [
+			'dbname', 'dbpassword', 'dbuser', 'dbserver', 'wikiName'
+		];
+
+		foreach( $requiredFields as $requiredField ) {
+			if( empty( $settings[$requiredField] ) ) {
+				throw new \Exception( "Required information '$requiredField' "
+						. "could not be extracted!" );
+			}
+			$this->{$requiredField} = $settings[$requiredField];
+		}
+	}
+
+	protected function initZipFile() {
+		$destFilePath = $this->makeDestFilepath();
+		$this->output->writeln( "Creating file '$destFilePath' ..." );
+		$this->zip = new ZipArchive();
+		$this->zip->open(
+			$destFilePath,
+			ZipArchive::CREATE|ZipArchive::OVERWRITE
+		);
+	}
+
+	protected function makeDestFilepath() {
+		$timestamp = date( 'YmdHis' );
+		return "{$this->dest}/{$this->wikiName}-$timestamp.zip";
+	}
+
+	protected $skipFolders = [ 'thumb', 'temp', 'cache' ];
+
+	protected function addImagesFolder() {
+		$imagesDir = new \RecursiveIteratorIterator(
+				new \RecursiveDirectoryIterator(
+					"{$this->mediawikiRoot}/images"
+				)
+		);
+		$imagesToBackup = [];
+		$this->output->writeln( "Adding 'images/' ..." );
+
+		foreach( $imagesDir as $fileInfo ) {
+			$fileInfo instanceof \SplFileInfo;
+			if( $fileInfo->isDir() ) {
+				continue;
+			}
+			$blacklisted = false;
+			foreach( $this->skipFolders as $folder ) {
+				$skipBasePath = "{$this->mediawikiRoot}/images/$folder";
+				if( strpos( $fileInfo->getPathname(), $skipBasePath ) === 0 ) {
+					$blacklisted = true;
+					break;
+				}
+			}
+			if( $blacklisted ) {
+				continue;
+			}
+			$imagesToBackup[] = $fileInfo->getPathname();
+		}
+
+		$progressBar = new ProgressBar(
+			$this->output,
+			count( $imagesToBackup )
+		);
+
+		$pregPattern = '#^' . preg_quote( "{$this->mediawikiRoot}/" ) .'#';
+		foreach( $imagesToBackup as $path ) {
+			$localPath = preg_replace( $pregPattern, '', $path );
+			$this->zip->addFile( $path, "filesystem/$localPath" );
+			$progressBar->advance();
+		}
+
+		$progressBar->finish();
+		$this->output->write( "\n" );
+	}
+
+	protected $skipTables = [ 'objectcache', 'l10n_cache', 'bs_whoisonline', 'smw_.*?' ];
+
+	protected $tmpDumpFilepath = '';
+
+	protected function dumpDatabase() {
+		$this->output->writeln(
+			"Dumping '{$this->dbserver}/{$this->dbname}' ..."
+		);
+
+		$dumpSettings = [
+			'add-drop-table' => true,
+			'no-data' => array_map( function( $item ) {
+				return $this->dbprefix.$item;
+			}, $this->skipTables )
+		];
+
+		$dump = new Mysqldump(
+			"mysql:host={$this->dbserver};dbname={$this->dbname}",
+			$this->dbuser,
+			$this->dbpassword,
+			$dumpSettings
+		);
+
+		$tmpPath = sys_get_temp_dir();
+		$this->tmpDumpFilepath = "$tmpPath/{$this->dbname}.sql";
+
+		$dump->start( $this->tmpDumpFilepath );
+
+		$localPath = "database.sql";
+		$this->output->writeln( "Adding '$localPath' ..." );
+		$this->zip->addFile( $this->tmpDumpFilepath, $localPath );
+	}
+
+	protected function addSettingsFiles() {
+		$settingsFiles = new SettingsFileIterator( $this->mediawikiRoot );
+
+		$progressBar = new ProgressBar(
+			$this->output,
+			count( $settingsFiles->getArrayIterator() )
+		);
+		$quotedMediaWikiRoot = preg_quote( $this->mediawikiRoot );
+		$mediaWikiRootStripPattern = "#^$quotedMediaWikiRoot#";
+		$this->output->writeln( "Adding 'settings' ..." );
+		foreach( $settingsFiles as $settingsFile ) {
+			$path = $settingsFile->getPathname();
+			$localPath = preg_replace( $mediaWikiRootStripPattern, '', $path  );
+			$localPath = trim( $localPath, '/' );
+			$this->zip->addFile( $path, "filesystem/$localPath" );
+			$progressBar->advance();
+		}
+		$progressBar->finish();
+		$this->output->write( "\n" );
+	}
+
+	protected function cleanUp() {
+		unlink( $this->tmpDumpFilepath );
+	}
+
+}

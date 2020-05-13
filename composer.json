@@ -1,0 +1,25 @@
+{
+	"name": "bluespice/mwadmin-cmd",
+	"description": "Command line tool for internal use",
+	"authors": [
+		{
+			"name": "Peter Starzer",
+			"email": "starzer@hallowelt.com"
+		}
+	],
+	"require": {
+		"composer/composer": "1.*",
+		"cpliakas/git-wrapper": "1.7.0",
+		"m4tthumphrey/php-gitlab-api": "9.0.0",
+		"symfony/console": "v3.4.9",
+		"ifsnop/mysqldump-php": "v2.4",
+		"php-http/guzzle6-adapter": "*",
+		"symfony/process": "~3"
+	},
+	"autoload" : {
+		"psr-4": {
+			"MwAdmin\\Cmd\\Tests\\" : "tests/phpunit",
+			"MwAdmin\\Cmd\\" : "src"
+		}
+	}
+}
