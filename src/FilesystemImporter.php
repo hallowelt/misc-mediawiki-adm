@@ -2,6 +2,7 @@
 
 namespace MWStake\MediaWiki\CliAdm;
 
+use Exception;
 use FilesystemIterator;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
@@ -97,7 +98,8 @@ class FilesystemImporter {
 					$this->importOptions[self::OPT_OVERWRITE_NEWER_FILE]
 				);
 				$this->output->writeln( "  ...OK" );
-			}   catch ( Exception $e ) {
+			}
+			catch ( Exception $e ) {
 				$this->output->writeln(
 					"<error>...Error performing copy: {$e->getMessage()}</error>"
 				);
