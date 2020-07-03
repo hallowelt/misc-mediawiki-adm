@@ -1,6 +1,6 @@
 <?php
 
-namespace MwAdmin\Cmd\Commands;
+namespace MWStake\MediaWiki\CliAdm\Commands;
 
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input;
@@ -8,8 +8,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
 use ZipArchive;
 use Ifsnop\Mysqldump\Mysqldump;
-use MwAdmin\Cmd\SettingsReader;
-use MwAdmin\Cmd\SettingsFileIterator;
+use MWStake\MediaWiki\CliAdm\SettingsReader;
+use MWStake\MediaWiki\CliAdm\SettingsFileIterator;
 
 class WikiBackup extends Command {
 

@@ -1,9 +1,9 @@
 <?php
 
-namespace MwAdmin\Cmd;
+namespace MWStake\MediaWiki\CliAdm;
 
 use RecursiveIteratorIterator;
-use MwAdmin\Cmd\SettingsFileIterator;
+use MWStake\MediaWiki\CliAdm\SettingsFileIterator;
 
 class SettingsReader {
 

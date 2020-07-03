@@ -1,6 +1,6 @@
 {
-	"name": "bluespice/mwadmin-cmd",
-	"description": "Command line tool for internal use",
+	"name": "mwstake/mediawiki-adm",
+	"description": "Command line tool for administration of MediaWiki",
 	"authors": [
 		{
 			"name": "Peter Starzer",
@@ -18,8 +18,8 @@
 	},
 	"autoload" : {
 		"psr-4": {
-			"MwAdmin\\Cmd\\Tests\\" : "tests/phpunit",
-			"MwAdmin\\Cmd\\" : "src"
+			"MWStake\\MediaWiki\\CliAdm\\Tests\\" : "tests/phpunit",
+			"MWStake\\MediaWiki\\CliAdm\\" : "src"
 		}
 	}
 }

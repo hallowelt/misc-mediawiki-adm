@@ -1,6 +1,6 @@
 <?php
 
-namespace MwAdmin\Cmd\Commands;
+namespace MWStake\MediaWiki\CliAdm\Commands;
 
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
@@ -11,12 +11,12 @@ use ZipArchive;
 use Exception;
 use SplFileInfo;
 use Symfony\Component\Filesystem\Filesystem;
-use MwAdmin\Cmd\IRestoreProfile;
-use MwAdmin\Cmd\NullRestoreProfile;
-use MwAdmin\Cmd\JSONRestoreProfile;
-use MwAdmin\Cmd\DatabaseImporter;
-use MwAdmin\Cmd\FilesystemImporter;
-use MwAdmin\Cmd\SettingsReader;
+use MWStake\MediaWiki\CliAdm\IRestoreProfile;
+use MWStake\MediaWiki\CliAdm\NullRestoreProfile;
+use MWStake\MediaWiki\CliAdm\JSONRestoreProfile;
+use MWStake\MediaWiki\CliAdm\DatabaseImporter;
+use MWStake\MediaWiki\CliAdm\FilesystemImporter;
+use MWStake\MediaWiki\CliAdm\SettingsReader;
 use PDO;
 
 class WikiRestore extends Command {

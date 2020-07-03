@@ -1,6 +1,6 @@
 <?php
 
-namespace MwAdmin\Cmd;
+namespace MWStake\MediaWiki\CliAdm;
 
 use FilesystemIterator;
 use RecursiveIteratorIterator;

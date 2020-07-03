@@ -1,8 +1,8 @@
 <?php
 
-namespace MwAdmin\Cmd;
+namespace MWStake\MediaWiki\CliAdm;
 
-use MwAdmin\Cmd\IRestoreProfile;
+use MWStake\MediaWiki\CliAdm\IRestoreProfile;
 
 class NullRestoreProfile implements IRestoreProfile {
 
