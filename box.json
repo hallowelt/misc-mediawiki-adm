@@ -11,8 +11,8 @@
                 }
         ],
         "git-version": "package_version",
-        "main": "bin/mwadmin-cmd",
-        "output": "build/mwadmin-cmd.phar",
+        "main": "bin/mediawiki-adm",
+        "output": "build/mediawiki-adm.phar",
         "stub": true
 }
 
