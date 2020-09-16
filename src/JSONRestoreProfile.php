@@ -5,10 +5,21 @@ namespace MWStake\MediaWiki\CliAdm;
 class JSONRestoreProfile implements IRestoreProfile {
 
 	protected $data = [
-		'db-exclude' => [],
-		'fs-exclude' => []
+		'fs-options' => [
+			'skip-paths' => [],
+			'overwrite-newer' => false,
+		],
+		'db-options' => [
+			'connection' => [],
+			'skip-tables' => [],
+			'skip-tables-data' => []
+		]
 	];
 
+	/**
+	 *
+	 * @param string $jsonFilePathname
+	 */
 	public function __construct( $jsonFilePathname ) {
 		$contents = file_get_contents( $jsonFilePathname );
 		$filedata = json_decode( $contents, true );
@@ -16,14 +27,26 @@ class JSONRestoreProfile implements IRestoreProfile {
 		$this->data = array_merge( $this->data, $filedata );
 	}
 
+	/**
+	 *
+	 * @inheritDoc
+	 */
 	public function getFSImportOptions() {
-		return $this->data['db-exclude'];
+		return $this->data['fs-options'];
 	}
 
+	/**
+	 *
+	 * @inheritDoc
+	 */
 	public function getDBImportOptions() {
-		return $this->data['fs-exclude'];
+		return $this->data['db-options'];
 	}
 
+	/**
+	 *
+	 * @inheritDoc
+	 */
 	public function getOptions() {
 		return $this->data;
 	}

@@ -128,7 +128,7 @@ class WikiRestore extends Command {
 		$this->extractSourceIntoWorkDir();
 		$this->removeSourceFromWorkDir();
 		$this->readWikiConfig();
-		$this->importFilesystem();
+		#$this->importFilesystem();
 		$this->importDatabase();
 		$this->removeTempWorkDir();
 		$this->outputEndInfo( $output );
@@ -193,14 +193,12 @@ class WikiRestore extends Command {
 			$this->filesystem,
 			$this->input,
 			$this->output,
-			$this->profile->getOptions()
+			$this->profile->getFSImportOptions()
 		);
-		$importOptions = $this->profile->getFSImportOptions();
 		$filesytemPath = "{$this->tmpWorkingDir}/filesystem";
 		$filesystemImporter->importDirectory(
 			$this->mediawikiRoot,
-			$filesytemPath,
-			$importOptions
+			$filesytemPath
 		);
 	}
 
@@ -210,7 +208,7 @@ class WikiRestore extends Command {
 			$pdo,
 			$this->input,
 			$this->output,
-			$this->profile->getOptions()
+			$this->profile->getDBImportOptions()
 		);
 		$dumpfilepath = "{$this->tmpWorkingDir}/database.sql";
 		$databaseImporter->importFile( $dumpfilepath );
@@ -258,8 +256,25 @@ class WikiRestore extends Command {
 	 * @return PDO
 	 */
 	private function makePDO() {
-		$dsn = "mysql:host={$this->settings['dbserver']};dbname={$this->settings['dbname']}";
-		return new PDO( $dsn, $this->settings['dbuser'], $this->settings['dbpassword'] );
+		$connection = [
+			'dbserver' => $this->settings['dbserver'],
+			'dbname' => $this->settings['dbname'],
+			'dbuser' => $this->settings['dbuser'],
+			'dbpassword' => $this->settings['dbpassword']
+		];
+
+		$profileDBOptions = $this->profile->getDBImportOptions();
+		$connection = $profileDBOptions['connection'] + $connection;
+
+		$dsn = "mysql:host={$connection['dbserver']}";
+		$pdo = new PDO( $dsn, $connection['dbuser'], $connection['dbpassword'] );
+		$pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
+
+		$dbname = "`" . str_replace( "`", "``", $connection['dbname']) . "`";
+		$pdo->query("CREATE DATABASE IF NOT EXISTS $dbname");
+		$pdo->query("use $dbname");
+
+		return $pdo;
 	}
 
 	/**
@@ -284,7 +299,7 @@ class WikiRestore extends Command {
 		$scriptRunTime = $this->endTime->diff( $this->startTime );
 		$formattedScriptRunTime = $scriptRunTime->format( '%Im %Ss' );
 
-		$output->writeln( "Finished in $formattedScriptRunTime ($formattedTimestamp)" );
+		$output->writeln( "\nFinished in $formattedScriptRunTime ($formattedTimestamp)" );
 	}
 
 }

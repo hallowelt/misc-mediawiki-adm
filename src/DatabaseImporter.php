@@ -4,12 +4,15 @@ namespace MWStake\MediaWiki\CliAdm;
 
 use PDO;
 use PDOException;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\Input;
 use Symfony\Component\Console\Output\Output;
 
 class DatabaseImporter {
 
 	const OPT_SKIP_TABLES = 'skip-tables';
+
+	const OPT_SKIP_TABLES_DATA = 'skip-tables-data';
 
 	/**
 	 *
@@ -34,7 +37,8 @@ class DatabaseImporter {
 	 * @var array
 	 */
 	private $importOptions = [
-		self::OPT_SKIP_TABLES => []
+		self::OPT_SKIP_TABLES => [],
+		self::OPT_SKIP_TABLES_DATA => []
 	];
 
 	/**
@@ -42,6 +46,7 @@ class DatabaseImporter {
 	 * @param PDO $pdo
 	 * @param Input $input
 	 * @param Output $output
+	 * @param array $importOptions
 	 */
 	public function __construct( $pdo, $input, $output, $importOptions ) {
 		$this->pdo = $pdo;
@@ -61,27 +66,7 @@ class DatabaseImporter {
 	 * @param array $importOptions
 	 */
 	public function importFile( $pathname ) {
-		$this->readInAndCheckTableNames( $pathname );
-		if( $this->readyToImport() ) {
-			$this->doImport( $pathname );
-		}
-	}
-
-	private function readInAndCheckTableNames( $pathname ) {
-		$content= file_get_contents( $pathname );
-		$tables = [];
-		preg_replace_callback(
-			'#CREATE TABLE `(.*?)` \(#si',
-			function( $matches ) use ( &$tables ) {
-				$tables[] = $matches[1];
-				return $matches[0];
-			},
-			$content
-		);
-	}
-
-	private function readyToImport() {
-		return true;
+		$this->doImport( $pathname );
 	}
 
 	/**
@@ -90,15 +75,18 @@ class DatabaseImporter {
 	private function doImport( $pathname ) {
 		$errorDetect = false;
 		$tmpLine = '';
+		ini_set( "memory_limit", 0 );
 		$lines = file( $pathname );
+		$progressBar = new ProgressBar( $this->output, count( $lines ) );
 		foreach ($lines as $line) {
 			if ( $this->isCommentLine( $line ) ) {
+				$progressBar->advance();
 				continue;
 			}
 
-			$this->setCurrentLinesTable( $line );
-			if( $this->skipCurrentLine() ) {
-				$this->output->write( "s" );
+			$this->setCurrentLinesTable( $line, $progressBar );
+			if ( $this->skipCurrentLine() ) {
+				$progressBar->advance();
 				continue;
 			}
 
@@ -109,7 +97,6 @@ class DatabaseImporter {
 					//$this->output->writeln( $tmpLine );
 					$rowNum = $this->pdo->exec( $tmpLine );
 					//$this->pdo->commit();
-					$this->output->write( '.' );
 				} catch (PDOException $e) {
 					$this->output->writeln(
 						"<error>Error performing Query: " . $tmpLine . ": "
@@ -117,9 +104,12 @@ class DatabaseImporter {
 					);
 					$errorDetect = true;
 				}
+				$progressBar->advance();
 				$tmpLine = '';
 			}
 		}
+		$progressBar->setMessage( 'Done.' );
+		$progressBar->finish();
 
 		if ($errorDetect) {
 			return false;
@@ -143,32 +133,54 @@ class DatabaseImporter {
 
 	/**
 	 *
+	 * @var string
+	 */
+	private $currentLinesOperation = '';
+
+	/**
+	 *
 	 * @var string[]
 	 */
 	private $currentLinesTablePatterns = [
-		'#^DROP TABLE IF EXISTS `(.*?)`;#',
-		'#^CREATE TABLE `(.*?)` \(#',
-		'#^LOCK TABLES `(.*?)` WRITE;#',
-		'#^INSERT INTO `(.*?)` VALUES#'
+		'#^(DROP) TABLE IF EXISTS `(.*?)`;#',
+		'#^(CREATE) TABLE `(.*?)` \(#',
+		'#^(LOCK) TABLES `(.*?)` WRITE;#',
+		'#^(INSERT) INTO `(.*?)` VALUES#'
 	];
 
-	private function setCurrentLinesTable( $line ) {
+	/**
+	 *
+	 * @param string $line
+	 * @param ProgressBar $progressBar
+	 * @return void
+	 */
+	private function setCurrentLinesTable( $line, $progressBar ) {
 		$previousLinesTable = $this->currentLinesTable;
 		preg_replace_callback(
 			$this->currentLinesTablePatterns,
 			function( $matches ) {
-				$this->currentLinesTable = $matches[1];
+				$this->currentLinesOperation = $matches[1];
+				$this->currentLinesTable = $matches[2];
 				return $matches[0];
 			},
 			$line
 		);
 		if( $previousLinesTable !== $this->currentLinesTable ) {
-			$this->output->writeln( "\nProcessing table '{$this->currentLinesTable}'" );
+			$progressBar->setMessage( $this->currentLinesTable );
 		}
 	}
 
 	private function skipCurrentLine() {
 		if ( in_array( $this->currentLinesTable, $this->importOptions[static::OPT_SKIP_TABLES] ) ) {
+			return true;
+		}
+
+		$shouldSkipTablesData = in_array(
+			$this->currentLinesTable,
+			$this->importOptions[static::OPT_SKIP_TABLES_DATA]
+		);
+		$isInsertData = $this->currentLinesOperation === 'INSERT';
+		if ( $shouldSkipTablesData && $isInsertData ) {
 			return true;
 		}
 		return false;

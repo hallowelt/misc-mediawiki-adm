@@ -6,6 +6,7 @@ use Exception;
 use FilesystemIterator;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -44,9 +45,10 @@ class FilesystemImporter {
 
 	/**
 	 *
-	 * @param PDO $pdo
-	 * @param Input\InputInterface $input
-	 * @param Output $output
+	 * @param Filesystem $filesystem
+	 * @param InputInterface $input
+	 * @param OutputInterface $output
+	 * @param array $importOptions
 	 */
 	public function __construct( Filesystem $filesystem, InputInterface $input,
 		OutputInterface $output, array $importOptions = [] ) {
@@ -62,6 +64,12 @@ class FilesystemImporter {
 		}
 	}
 
+	/**
+	 *
+	 * @param string $destinationPath
+	 * @param string $dirPathname
+	 * @return void
+	 */
 	public function importDirectory( $destinationPath, $dirPathname ) {
 		if( $this->readyToImport() ) {
 			$this->doImport( $destinationPath, $dirPathname );
@@ -79,16 +87,19 @@ class FilesystemImporter {
 			new RecursiveDirectoryIterator( $dirPathname, FilesystemIterator::SKIP_DOTS ),
 			false
 		);
+
+		$progressBar = new ProgressBar( $this->output );
 		foreach( $iterator as $file ) {
 			$srcFilePath = str_replace( '\\', '/', $file->getPathname() );
-			$this->output->writeln( $srcFilePath );
+			#$this->output->writeln( $srcFilePath );
 			$targetFilePath = $destinationPath . substr(
 				$srcFilePath,
 				strlen( $dirPathname )
 			);
-			$this->output->writeln( "  => $targetFilePath" );
+			#$this->output->writeln( "  => $targetFilePath" );
 			if( $this->skipCurrentFile( $targetFilePath ) ) {
-				$this->output->writeln( "  ...SKIP" );
+				#$this->output->writeln( "  ...SKIP" );
+				$progressBar->advance();
 				continue;
 			}
 			try {
@@ -97,7 +108,7 @@ class FilesystemImporter {
 					$targetFilePath,
 					$this->importOptions[self::OPT_OVERWRITE_NEWER_FILE]
 				);
-				$this->output->writeln( "  ...OK" );
+				#$this->output->writeln( "  ...OK" );
 			}
 			catch ( Exception $e ) {
 				$this->output->writeln(
@@ -105,7 +116,10 @@ class FilesystemImporter {
 				);
 				$errorDetect = true;
 			}
+			$progressBar->advance();
 		}
+
+		$progressBar->advance();
 
 		if ($errorDetect) {
 			return false;
