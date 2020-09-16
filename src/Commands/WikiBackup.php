@@ -2,6 +2,7 @@
 
 namespace MWStake\MediaWiki\CliAdm\Commands;
 
+use DateTime;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -12,7 +13,6 @@ use MWStake\MediaWiki\CliAdm\SettingsReader;
 use MWStake\MediaWiki\CliAdm\SettingsFileIterator;
 
 class WikiBackup extends Command {
-
 
 	/**
 	 *
@@ -26,9 +26,23 @@ class WikiBackup extends Command {
 	 */
 	protected $output = null;
 
+	/**
+	 *
+	 * @var string
+	 */
 	protected $mediawikiRoot = '.';
 
+	/**
+	 *
+	 * @var string
+	 */
 	protected $dest = '';
+
+	/**
+	 *
+	 * @var boolean
+	 */
+	protected $omitTimestamp = false;
 
 	/**
 	 *
@@ -54,6 +68,13 @@ class WikiBackup extends Command {
 					Input\InputOption::VALUE_OPTIONAL,
 					'Specifies the directory to store the backup file',
 					'.'
+				),
+				new Input\InputOption(
+					'omit-timestamp',
+					null,
+					Input\InputOption::VALUE_NONE,
+					'Have no timestamp in the resulting filename',
+					null
 				)
 			] ) );
 
@@ -61,11 +82,13 @@ class WikiBackup extends Command {
 	}
 
 	protected function execute( Input\InputInterface $input, OutputInterface $output ) {
+		$this->outputStartInfo( $output );
 		$this->input = $input;
 		$this->output = $output;
 
 		$this->mediawikiRoot = $input->getOption( 'mediawiki-root' );
 		$this->dest = realpath( $input->getOption( 'dest' ) );
+		$this->omitTimestamp = $input->getOption( 'omit-timestamp' );
 
 		$this->readInSettingsFile();
 		$this->initZipFile();
@@ -77,6 +100,7 @@ class WikiBackup extends Command {
 		$this->cleanUp();
 
 		$this->output->writeln( '<info>--> Done.</info>' );
+		$this->outputEndInfo( $output );
 	}
 
 	protected $wikiName = '';
@@ -114,8 +138,13 @@ class WikiBackup extends Command {
 	}
 
 	protected function makeDestFilepath() {
-		$timestamp = date( 'YmdHis' );
-		return "{$this->dest}/{$this->wikiName}-$timestamp.zip";
+		$suffix = '';
+		if ( !$this->omitTimestamp ) {
+			$timestamp = date( 'YmdHis' );
+			$suffix = "-$timestamp";
+		}
+
+		return "{$this->dest}/{$this->wikiName}{$suffix}.zip";
 	}
 
 	protected $skipFolders = [ 'thumb', 'temp', 'cache' ];
@@ -222,4 +251,28 @@ class WikiBackup extends Command {
 		unlink( $this->tmpDumpFilepath );
 	}
 
+	/**
+	 *
+	 * @param OutputInterface $output
+	 * @return void
+	 */
+	private function outputStartInfo( $output ) {
+		$this->startTime = new DateTime();
+		$formattedTimestamp = $this->startTime->format( 'Y-m-d H:i:s');
+		$output->writeln( "Starting ($formattedTimestamp)" );
+	}
+
+	/**
+	 *
+	 * @param OutputInterface $output
+	 * @return void
+	 */
+	private function outputEndInfo( $output ) {
+		$this->endTime = new DateTime();
+		$formattedTimestamp = $this->endTime->format( 'Y-m-d H:i:s');
+		$scriptRunTime = $this->endTime->diff( $this->startTime );
+		$formattedScriptRunTime = $scriptRunTime->format( '%Im %Ss' );
+
+		$output->writeln( "Finished in $formattedScriptRunTime ($formattedTimestamp)" );
+	}
 }

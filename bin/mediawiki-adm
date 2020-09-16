@@ -3,14 +3,13 @@
 
 require __DIR__.'/../vendor/autoload.php';
 
-use MwAdmin\Cmd\Commands;
+use MWStake\MediaWiki\CliAdm\Commands;
 use Symfony\Component\Console\Application;
 
-$application = new Application( 'MwAdmin CMD', '@package_version@' );
+$application = new Application( 'MWStake MediaWiki CLI Admin', '@package_version@' );
 
 
 $application->add( new Commands\WikiBackup() );
 $application->add( new Commands\WikiRestore() );
-
 
 $application->run();

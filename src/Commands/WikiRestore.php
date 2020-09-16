@@ -2,6 +2,7 @@
 
 namespace MWStake\MediaWiki\CliAdm\Commands;
 
+use DateTime;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
 use Symfony\Component\Console\Command\Command;
@@ -111,6 +112,7 @@ class WikiRestore extends Command {
 	}
 
 	protected function execute( Input\InputInterface $input, OutputInterface $output ) {
+		$this->outputStartInfo( $output );
 		$this->input = $input;
 		$this->output = $output;
 
@@ -129,6 +131,7 @@ class WikiRestore extends Command {
 		$this->importFilesystem();
 		$this->importDatabase();
 		$this->removeTempWorkDir();
+		$this->outputEndInfo( $output );
 	}
 
 	private function makeTempWorkDir( $option = null ) {
@@ -137,7 +140,7 @@ class WikiRestore extends Command {
 			$this->tmpWorkingDir = $option;
 		}
 		$this->output->writeln( "Creating '{$this->tmpWorkingDir}'" );
-		$this->filesystem->mkdir( $this->tmpWorkingDir, 777 );
+		$this->filesystem->mkdir( $this->tmpWorkingDir, 0777 );
 	}
 
 	private function loadSourceIntoWorkDir() {
@@ -180,7 +183,7 @@ class WikiRestore extends Command {
 				error_log( $e->getMessage() );
 			}
 		}
-		// try again just for good messure... but still the directory may will
+		// try again just for good messure... but still the directory will
 		// not be removed after that
 		$this->filesystem->remove( $this->tmpWorkingDir );
 	}
@@ -257,6 +260,31 @@ class WikiRestore extends Command {
 	private function makePDO() {
 		$dsn = "mysql:host={$this->settings['dbserver']};dbname={$this->settings['dbname']}";
 		return new PDO( $dsn, $this->settings['dbuser'], $this->settings['dbpassword'] );
+	}
+
+	/**
+	 *
+	 * @param OutputInterface $output
+	 * @return void
+	 */
+	private function outputStartInfo( $output ) {
+		$this->startTime = new DateTime();
+		$formattedTimestamp = $this->startTime->format( 'Y-m-d H:i:s');
+		$output->writeln( "Starting ($formattedTimestamp)" );
+	}
+
+	/**
+	 *
+	 * @param OutputInterface $output
+	 * @return void
+	 */
+	private function outputEndInfo( $output ) {
+		$this->endTime = new DateTime();
+		$formattedTimestamp = $this->endTime->format( 'Y-m-d H:i:s');
+		$scriptRunTime = $this->endTime->diff( $this->startTime );
+		$formattedScriptRunTime = $scriptRunTime->format( '%Im %Ss' );
+
+		$output->writeln( "Finished in $formattedScriptRunTime ($formattedTimestamp)" );
 	}
 
 }
