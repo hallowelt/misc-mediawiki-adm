@@ -94,9 +94,9 @@ class DatabaseImporter {
 
 			if ( $this->isEndOfQuery( $line ) ) {
 				try {
-					//$this->output->writeln( $tmpLine );
-					$rowNum = $this->pdo->exec( $tmpLine );
-					//$this->pdo->commit();
+					$this->pdo->beginTransaction();
+					$this->pdo->exec( $tmpLine );
+					$this->pdo->commit();
 				} catch (PDOException $e) {
 					$this->output->writeln(
 						"<error>Error performing Query: " . $tmpLine . ": "

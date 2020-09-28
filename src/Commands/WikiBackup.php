@@ -206,7 +206,8 @@ class WikiBackup extends Command {
 			'add-drop-table' => true,
 			'no-data' => array_map( function( $item ) {
 				return $this->dbprefix.$item;
-			}, $this->skipTables )
+			}, $this->skipTables ),
+			'skip-definer' => true
 		];
 
 		$dump = new Mysqldump(
