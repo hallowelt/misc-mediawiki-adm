@@ -128,7 +128,7 @@ class WikiRestore extends Command {
 		$this->extractSourceIntoWorkDir();
 		$this->removeSourceFromWorkDir();
 		$this->readWikiConfig();
-		#$this->importFilesystem();
+		$this->importFilesystem();
 		$this->importDatabase();
 		$this->removeTempWorkDir();
 		$this->outputEndInfo( $output );
