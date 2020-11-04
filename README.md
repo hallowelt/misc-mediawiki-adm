@@ -9,7 +9,7 @@
 ## Restore a MediaWiki instance
 
 ```
-mediawiki-adm wiki-backup \
+mediawiki-adm wiki-restore \
     --mediawiki-root /var/www/mywiki \
     --src /mnt/backup/mywiki-20200916131745.zip
 ```
@@ -19,7 +19,7 @@ mediawiki-adm wiki-backup \
 If you want to import in a different database (e.g. for creating a test system) you can use the `--profile` parameter:
 
 ```
-mediawiki-adm wiki-backup \
+mediawiki-adm wiki-restore \
     --mediawiki-root /var/www/mywiki \
     --src /mnt/backup/mywiki-20200916131745.zip \
     --profile testsystem.json
