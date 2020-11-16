@@ -147,9 +147,7 @@ class WikiRestore extends Command {
 		$filename = basename( $this->srcFilepath );
 		$this->tmpFilepath = $this->tmpWorkingDir . '/' . $filename;
 		$this->output->writeln( "Loading '{$this->srcFilepath}' into '{$this->tmpFilepath}'" );
-
-		$content = file_get_contents( $this->srcFilepath );
-		file_put_contents( $this->tmpFilepath, $content );
+		copy( $this->srcFilepath, $this->tmpFilepath );
 	}
 
 	private function extractSourceIntoWorkDir() {
