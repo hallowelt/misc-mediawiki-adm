@@ -40,12 +40,16 @@ class BackupDirManager {
 		}
 
 		$numberOfRemovedFiles = 0;
-		$files = glob( "{$this->backupDirPath}/$backupFilePrefix*.zip" );
+		$files = glob( "{$this->backupDirPath}/$backupFilePrefix-*.zip" );
 		sort( $files );
 		$files = array_reverse( $files );
-
+		$includePattern = '#' . preg_quote( "$backupFilePrefix-" ) . '\d{14}\.zip$#';
 		$keptFiles = 0;
 		foreach( $files as $file ) {
+			$match = preg_match( $includePattern, $file );
+			if ( $match === 0 ) {
+				continue;
+			}
 			if ( $keptFiles < $maxNumber ) {
 				$keptFiles++;
 				continue;

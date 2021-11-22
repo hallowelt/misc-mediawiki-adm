@@ -108,8 +108,8 @@ class WikiBackup extends Command {
 		$this->readInSettingsFile();
 		$this->initZipFile();
 		$this->addSettingsFiles();
-		#$this->addImagesFolder();
-		#$this->dumpDatabase();
+		$this->addImagesFolder();
+		$this->dumpDatabase();
 
 		$this->zip->close();
 		$this->cleanUp();

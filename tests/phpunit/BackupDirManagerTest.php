@@ -38,13 +38,14 @@ class BackupDirManagerTest extends TestCase {
 		$output = $this->createMock( OutputInterface::class );
 		$backupDirManager = new BackupDirManager( $this->backupDirPath, $output );
 
-		// Delete two out of four
+		// Delete two out of five
 		$numberOfDeletedFiles = $backupDirManager->removeOldFiles( 'mediawiki', 2 );
 		$this->assertEquals( 2, $numberOfDeletedFiles );
 		$this->assertFileNotExists( $this->testFiles[0] );
 		$this->assertFileNotExists( $this->testFiles[1] );
 		$this->assertFileExists( $this->testFiles[2] );
 		$this->assertFileExists( $this->testFiles[3] );
+		$this->assertFileExists( $this->testFiles[4] );
 
 		// Delete nothing
 		$this->makeBackupDir( 'Test2' );
@@ -54,6 +55,7 @@ class BackupDirManagerTest extends TestCase {
 		$this->assertFileExists( $this->testFiles[1] );
 		$this->assertFileExists( $this->testFiles[2] );
 		$this->assertFileExists( $this->testFiles[3] );
+		$this->assertFileExists( $this->testFiles[4] );
 	}
 
 	private function makeBackupDir( $name ) {
@@ -65,6 +67,7 @@ class BackupDirManagerTest extends TestCase {
 			"{$this->backupDirPath}/mediawiki-20210102000000.zip",
 			"{$this->backupDirPath}/mediawiki-20210103000000.zip",
 			"{$this->backupDirPath}/mediawiki-20210104000000.zip",
+			"{$this->backupDirPath}/mediawiki-20210101000000.bak.zip",
 		];
 		foreach ( $this->testFiles as $testFile ) {
 			$fh = fopen( $testFile, 'w' );
