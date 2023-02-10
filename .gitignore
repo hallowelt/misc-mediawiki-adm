@@ -1,2 +1,4 @@
 vendor
 build/mediawiki-adm.phar
+composer.lock
+.phpunit.result.cache

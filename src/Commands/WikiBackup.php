@@ -9,6 +9,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
 use ZipArchive;
 use Ifsnop\Mysqldump\Mysqldump;
+use MWStake\MediaWiki\CliAdm\BackupDirManager;
 use MWStake\MediaWiki\CliAdm\SettingsReader;
 use MWStake\MediaWiki\CliAdm\SettingsFileIterator;
 
@@ -46,6 +47,12 @@ class WikiBackup extends Command {
 
 	/**
 	 *
+	 * @var integer
+	 */
+	private $maxBackupFiles = -1;
+
+	/**
+	 *
 	 * @var ZipArchive
 	 */
 	protected $zip = null;
@@ -75,6 +82,13 @@ class WikiBackup extends Command {
 					Input\InputOption::VALUE_NONE,
 					'Have no timestamp in the resulting filename',
 					null
+				),
+				new Input\InputOption(
+					'max-backup-files',
+					null,
+					Input\InputOption::VALUE_OPTIONAL,
+					'Number of files with the same filename-prefix to keep',
+					-1
 				)
 			] ) );
 
@@ -89,6 +103,7 @@ class WikiBackup extends Command {
 		$this->mediawikiRoot = $input->getOption( 'mediawiki-root' );
 		$this->dest = realpath( $input->getOption( 'dest' ) );
 		$this->omitTimestamp = $input->getOption( 'omit-timestamp' );
+		$this->maxBackupFiles = (int) $input->getOption( 'max-backup-files' );
 
 		$this->readInSettingsFile();
 		$this->initZipFile();
@@ -98,6 +113,8 @@ class WikiBackup extends Command {
 
 		$this->zip->close();
 		$this->cleanUp();
+
+		$this->removeOldBackups();
 
 		$this->output->writeln( '<info>--> Done.</info>' );
 		$this->outputEndInfo( $output );
@@ -275,5 +292,10 @@ class WikiBackup extends Command {
 		$formattedScriptRunTime = $scriptRunTime->format( '%Im %Ss' );
 
 		$output->writeln( "Finished in $formattedScriptRunTime ($formattedTimestamp)" );
+	}
+
+	private function removeOldBackups() {
+		$backupdirManager = new BackupDirManager( $this->dest, $this->output );
+		$backupdirManager->removeOldFiles( $this->wikiName, $this->maxBackupFiles );
 	}
 }
