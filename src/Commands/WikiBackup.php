@@ -4,11 +4,8 @@ namespace MWStake\MediaWiki\CliAdm\Commands;
 
 use DateTime;
 use MWStake\MediaWiki\CliAdm\IBackupProfile;
-use MWStake\MediaWiki\CliAdm\IRestoreProfile;
 use MWStake\MediaWiki\CliAdm\JsonBackupProfile;
-use MWStake\MediaWiki\CliAdm\JSONRestoreProfile;
 use MWStake\MediaWiki\CliAdm\NullBackupProfile;
-use MWStake\MediaWiki\CliAdm\NullRestoreProfile;
 use SplFileInfo;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input;

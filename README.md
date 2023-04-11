@@ -58,12 +58,12 @@ With the contents of `some-profile.json` to be
 
 ```
 {
-	"fs-options": {
+    "fs-options": {
         "skip-image-paths": [
             "cache",
             "temp"
         ]
-	}
+    }
 }
 ```
 
@@ -73,14 +73,16 @@ Also, you may want to exclude some data tables. It can be done that way:
 ```
 {
     "db-options": {
-	    "skip-tables: [
+        "skip-tables: [
+            "object_cache",
+            "l10n_cache"
         ]
-	},
-	"fs-options": {
+    },
+    "fs-options": {
         "skip-image-paths": [
             "cache",
             "temp"
         ]
-	}
+    }
 }
 ```
