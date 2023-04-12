@@ -4,8 +4,8 @@ namespace MWStake\MediaWiki\CliAdm\Commands;
 
 use DateTime;
 use MWStake\MediaWiki\CliAdm\IBackupProfile;
-use MWStake\MediaWiki\CliAdm\JsonBackupProfile;
-use MWStake\MediaWiki\CliAdm\NullBackupProfile;
+use MWStake\MediaWiki\CliAdm\JSONBackupProfile;
+use MWStake\MediaWiki\CliAdm\DefaultBackupProfile;
 use SplFileInfo;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input;
@@ -300,7 +300,7 @@ class WikiBackup extends Command {
 	 */
 	private function loadProfile( $profileFilepath ) {
 		if( $profileFilepath === null ) {
-			$this->profile = new NullBackupProfile();
+			$this->profile = new DefaultBackupProfile();
 			return;
 		}
 
@@ -308,10 +308,10 @@ class WikiBackup extends Command {
 		$extension = strtolower( $profileFile->getExtension() );
 
 		if( $extension === 'json') {
-			$this->profile = new JsonBackupProfile( $profileFile->getPathname() );
+			$this->profile = new JSONBackupProfile( $profileFile->getPathname() );
 			return;
 		}
-		$this->profile = new NullBackupProfile();
+		$this->profile = new DefaultBackupProfile();
 	}
 
 	/**

@@ -2,7 +2,7 @@
 
 namespace MWStake\MediaWiki\CliAdm;
 
-class JsonBackupProfile implements IBackupProfile {
+class DefaultBackupProfile implements IBackupProfile {
 
 	/**
 	 * @var array
@@ -24,16 +24,6 @@ class JsonBackupProfile implements IBackupProfile {
 			]
 		]
 	];
-
-	/**
-	 * @param string $jsonFilePathname
-	 */
-	public function __construct( string $jsonFilePathname ) {
-		$contents = file_get_contents( $jsonFilePathname );
-		$filedata = json_decode( $contents, true );
-
-		$this->data = array_merge( $this->data, $filedata );
-	}
 
 	/**
 	 * @inheritDoc
