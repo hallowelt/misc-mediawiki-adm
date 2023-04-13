@@ -8,7 +8,6 @@
 		}
 	],
 	"require": {
-		"composer/composer": "1.*",
 		"symfony/console": "v3.4.9",
 		"ifsnop/mysqldump-php": "v2.4"
 	},
