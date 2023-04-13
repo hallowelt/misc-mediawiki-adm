@@ -42,3 +42,47 @@ With the contents of `testsystem.json` to be
 	}
 }
 ```
+
+### Overriding back-up settings
+
+If you want to specify some image folders to skip when making back-up you can use the `--profile` parameter:
+
+```
+mediawiki-adm wiki-backup \
+    --mediawiki-root /var/www/mywiki \
+    --dest /mnt/backup/ \
+    --profile some-profile.json
+```
+
+With the contents of `some-profile.json` to be
+
+```
+{
+    "fs-options": {
+        "skip-image-paths": [
+            "cache",
+            "temp"
+        ]
+    }
+}
+```
+
+This will exclude `$IP/images/cache` and `$IP/images/temp` from back-up.
+
+Also, you may want to exclude some data tables. It can be done that way:
+```
+{
+    "db-options": {
+        "skip-tables: [
+            "object_cache",
+            "l10n_cache"
+        ]
+    },
+    "fs-options": {
+        "skip-image-paths": [
+            "cache",
+            "temp"
+        ]
+    }
+}
+```

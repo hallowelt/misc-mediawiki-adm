@@ -3,6 +3,10 @@
 namespace MWStake\MediaWiki\CliAdm\Commands;
 
 use DateTime;
+use MWStake\MediaWiki\CliAdm\IBackupProfile;
+use MWStake\MediaWiki\CliAdm\JSONBackupProfile;
+use MWStake\MediaWiki\CliAdm\DefaultBackupProfile;
+use SplFileInfo;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -52,6 +56,11 @@ class WikiBackup extends Command {
 	private $maxBackupFiles = -1;
 
 	/**
+	 * @var IBackupProfile
+	 */
+	protected $profile = null;
+
+	/**
 	 *
 	 * @var ZipArchive
 	 */
@@ -89,7 +98,13 @@ class WikiBackup extends Command {
 					Input\InputOption::VALUE_OPTIONAL,
 					'Number of files with the same filename-prefix to keep',
 					-1
-				)
+				),
+				new Input\InputOption(
+					'profile',
+					null,
+					Input\InputOption::VALUE_OPTIONAL,
+					'Specifies a profile for the back-up'
+				),
 			] ) );
 
 		return parent::configure();
@@ -104,6 +119,8 @@ class WikiBackup extends Command {
 		$this->dest = realpath( $input->getOption( 'dest' ) );
 		$this->omitTimestamp = $input->getOption( 'omit-timestamp' );
 		$this->maxBackupFiles = (int) $input->getOption( 'max-backup-files' );
+
+		$this->loadProfile( $input->getOption( 'profile' ) );
 
 		$this->readInSettingsFile();
 		$this->initZipFile();
@@ -164,8 +181,6 @@ class WikiBackup extends Command {
 		return "{$this->dest}/{$this->wikiName}{$suffix}.zip";
 	}
 
-	protected $skipFolders = [ 'thumb', 'temp', 'cache' ];
-
 	protected function addImagesFolder() {
 		$imagesDir = new \RecursiveIteratorIterator(
 				new \RecursiveDirectoryIterator(
@@ -175,13 +190,19 @@ class WikiBackup extends Command {
 		$imagesToBackup = [];
 		$this->output->writeln( "Adding 'images/' ..." );
 
+		$skipFolders = [];
+
+		$filesystemOptions = $this->profile->getFSBackupOptions();
+		if ( isset( $filesystemOptions['skip-image-paths'] ) ) {
+			$skipFolders = $filesystemOptions['skip-image-paths'];
+		}
+
 		foreach( $imagesDir as $fileInfo ) {
-			$fileInfo instanceof \SplFileInfo;
 			if( $fileInfo->isDir() ) {
 				continue;
 			}
 			$blacklisted = false;
-			foreach( $this->skipFolders as $folder ) {
+			foreach( $skipFolders as $folder ) {
 				$skipBasePath = "{$this->mediawikiRoot}/images/$folder";
 				if( strpos( $fileInfo->getPathname(), $skipBasePath ) === 0 ) {
 					$blacklisted = true;
@@ -210,8 +231,6 @@ class WikiBackup extends Command {
 		$this->output->write( "\n" );
 	}
 
-	protected $skipTables = [ 'objectcache', 'l10n_cache', 'bs_whoisonline', 'smw_.*?' ];
-
 	protected $tmpDumpFilepath = '';
 
 	protected function dumpDatabase() {
@@ -219,11 +238,18 @@ class WikiBackup extends Command {
 			"Dumping '{$this->dbserver}/{$this->dbname}' ..."
 		);
 
+		$skipTables = [];
+
+		$dbOptions = $this->profile->getDBBackupOptions();
+		if ( isset( $dbOptions['skip-tables'] ) ) {
+			$skipTables = $dbOptions['skip-tables'];
+		}
+
 		$dumpSettings = [
 			'add-drop-table' => true,
-			'no-data' => array_map( function( $item ) {
+			'no-data' => array_map( function( $item ) use ( $skipTables ) {
 				return $this->dbprefix.$item;
-			}, $this->skipTables ),
+			}, $skipTables ),
 			'skip-definer' => true
 		];
 
@@ -267,6 +293,25 @@ class WikiBackup extends Command {
 
 	protected function cleanUp() {
 		unlink( $this->tmpDumpFilepath );
+	}
+
+	/**
+	 * @param $profileFilepath
+	 */
+	private function loadProfile( $profileFilepath ) {
+		if( $profileFilepath === null ) {
+			$this->profile = new DefaultBackupProfile();
+			return;
+		}
+
+		$profileFile = new SplFileInfo( $profileFilepath );
+		$extension = strtolower( $profileFile->getExtension() );
+
+		if( $extension === 'json') {
+			$this->profile = new JSONBackupProfile( $profileFile->getPathname() );
+			return;
+		}
+		$this->profile = new DefaultBackupProfile();
 	}
 
 	/**
