@@ -9,6 +9,7 @@
 	],
 	"require": {
 		"symfony/console": "v3.4.9",
+		"symfony/filesystem": "~5",
 		"ifsnop/mysqldump-php": "v2.4"
 	},
 	"require-dev": {
