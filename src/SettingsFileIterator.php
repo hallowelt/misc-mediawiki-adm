@@ -6,6 +6,8 @@ use AppendIterator;
 use FilesystemIterator;
 use CallbackFilterIterator;
 use Exception;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 
 class SettingsFileIterator extends AppendIterator {
 
@@ -23,12 +25,14 @@ class SettingsFileIterator extends AppendIterator {
 	 */
 	private function appendBlueSpiceFoundationConfig( $dir ) {
 		try {
-			$blueSpiceFoundationConfig = new FilesystemIterator(
-				"$dir/extensions/BlueSpiceFoundation/config",
-				FilesystemIterator::SKIP_DOTS
+			$blueSpiceFoundationConfig = new RecursiveIteratorIterator(
+					new RecursiveDirectoryIterator(
+						"$dir/extensions/BlueSpiceFoundation/config",
+						FilesystemIterator::SKIP_DOTS
+					)
 			);
 			$this->append( $blueSpiceFoundationConfig );
-		} catch( Exception $ex) {
+		} catch( Exception $ex ) {
 
 		}
 	}
@@ -39,12 +43,14 @@ class SettingsFileIterator extends AppendIterator {
 	 */
 	private function appendSettingsD( $dir ) {
 		try {
-			$settingsD = new FilesystemIterator(
-				"$dir/settings.d",
-				FilesystemIterator::SKIP_DOTS
+				$settingsD = new RecursiveIteratorIterator(
+					new RecursiveDirectoryIterator(
+						"$dir/settings.d",
+						FilesystemIterator::SKIP_DOTS
+					)
 			);
 			$this->append( $settingsD );
-		} catch( Exception $ex) {
+		} catch( Exception $ex ) {
 
 		}
 	}

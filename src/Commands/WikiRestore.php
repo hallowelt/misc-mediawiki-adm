@@ -22,6 +22,15 @@ use PDO;
 
 class WikiRestore extends Command {
 
+	/**
+	 * @var DateTime
+	 */
+	private $startTime = null;
+
+	/**
+	 * @var DateTime
+	 */
+	private $endTime = null;
 
 	/**
 	 *

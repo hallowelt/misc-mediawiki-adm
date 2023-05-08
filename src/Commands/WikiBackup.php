@@ -16,8 +16,20 @@ use Ifsnop\Mysqldump\Mysqldump;
 use MWStake\MediaWiki\CliAdm\BackupDirManager;
 use MWStake\MediaWiki\CliAdm\SettingsReader;
 use MWStake\MediaWiki\CliAdm\SettingsFileIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 
 class WikiBackup extends Command {
+
+	/**
+	 * @var DateTime
+	 */
+	private $startTime = null;
+
+	/**
+	 * @var DateTime
+	 */
+	private $endTime = null;
 
 	/**
 	 *
@@ -182,8 +194,8 @@ class WikiBackup extends Command {
 	}
 
 	protected function addImagesFolder() {
-		$imagesDir = new \RecursiveIteratorIterator(
-				new \RecursiveDirectoryIterator(
+		$imagesDir = new RecursiveIteratorIterator(
+				new RecursiveDirectoryIterator(
 					"{$this->mediawikiRoot}/images"
 				)
 		);
