@@ -79,6 +79,7 @@ class WikiBackup extends Command {
 	protected $zip = null;
 
 	protected function configure() {
+		parent::configure();
 		$this
 			->setName( 'wiki-backup' )
 			->setDescription( 'Creates a ZIP archive containing all necessary data elements' )
@@ -118,8 +119,6 @@ class WikiBackup extends Command {
 					'Specifies a profile for the back-up'
 				),
 			] ) );
-
-		return parent::configure();
 	}
 
 	protected function execute( Input\InputInterface $input, OutputInterface $output ) {

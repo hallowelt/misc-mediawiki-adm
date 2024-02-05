@@ -87,6 +87,7 @@ class WikiRestore extends Command {
 	protected $settings = [];
 
 	protected function configure() {
+		parent::configure();
 		$this
 			->setName( 'wiki-restore' )
 			->setDescription( 'Uses a ZIP from "backup-wiki" to restore a wiki instance' )
@@ -117,7 +118,6 @@ class WikiRestore extends Command {
 					'Specifies the temp work dir path'
 				)
 			] ) );
-		parent::configure();
 	}
 
 	protected function execute( Input\InputInterface $input, OutputInterface $output ) {

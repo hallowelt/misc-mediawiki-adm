@@ -8,7 +8,6 @@ use Symfony\Component\Console\Application;
 
 $application = new Application( 'MWStake MediaWiki CLI Admin', '@package_version@' );
 
-
 $application->add( new Commands\WikiBackup() );
 $application->add( new Commands\WikiRestore() );
 

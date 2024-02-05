@@ -7,6 +7,11 @@
 			"email": "starzer@hallowelt.com"
 		}
 	],
+	"config": {
+		"platform": {
+			"php": "7.4"
+		}
+	},
 	"require": {
 		"symfony/console": "v3.4.9",
 		"symfony/filesystem": "~5",
