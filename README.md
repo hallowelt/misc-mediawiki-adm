@@ -73,7 +73,7 @@ Also, you may want to exclude some data tables. It can be done that way:
 ```
 {
     "db-options": {
-        "skip-tables: [
+        "skip-tables": [
             "object_cache",
             "l10n_cache"
         ]
