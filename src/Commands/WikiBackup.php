@@ -134,6 +134,7 @@ class WikiBackup extends Command {
 		$this->loadProfile( $input->getOption( 'profile' ) );
 
 		$this->readInSettingsFile();
+		$this->ceckDatabaseConnection();
 		$this->initZipFile();
 		$this->addSettingsFiles();
 		$this->addImagesFolder();
@@ -156,6 +157,15 @@ class WikiBackup extends Command {
 	protected $dbprefix = '';
 
 	protected function readInSettingsFile() {
+		$profileData = $this->profile->getDBBackupOptions();;
+		if ( isset( $profileData['connection'] ) ) {
+			$connection = $profileData['connection'];
+			$this->dbname = $connection['dbname'] ?? '';
+			$this->dbuser = $connection['dbuser'] ?? '';
+			$this->dbpassword = $connection['dbpassword'] ?? '';
+			$this->dbserver = $connection['dbserver'] ?? '';
+		}
+
 		$settingsReader = new SettingsReader();
 		$settings = $settingsReader->getSettingsFromDirectory( $this->mediawikiRoot );
 
@@ -164,11 +174,29 @@ class WikiBackup extends Command {
 		];
 
 		foreach( $requiredFields as $requiredField ) {
+			if( !empty( $this->{$requiredField} ) ) {
+				// Already set by the provided backup-profile
+				continue;
+			}
 			if( empty( $settings[$requiredField] ) ) {
 				throw new \Exception( "Required information '$requiredField' "
 						. "could not be extracted!" );
 			}
 			$this->{$requiredField} = $settings[$requiredField];
+		}
+	}
+
+	private function ceckDatabaseConnection() {
+		$this->output->writeln( "Checking database connection ..." );
+		$this->output->writeln( "Connecting to '{$this->dbserver}/{$this->dbname}' as {$this->dbname}..." );
+		try {
+			new \PDO(
+				"mysql:host={$this->dbserver};dbname={$this->dbname}",
+				$this->dbuser,
+				$this->dbpassword
+			);
+		} catch( \PDOException $ex ) {
+			throw new \Exception( "Could not connect to database: " . $ex->getMessage() );
 		}
 	}
 

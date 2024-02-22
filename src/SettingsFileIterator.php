@@ -65,7 +65,7 @@ class SettingsFileIterator extends AppendIterator {
 			FilesystemIterator::SKIP_DOTS
 		);
 		$filteredRoot = new CallbackFilterIterator( $root, function ($current, $key, $iterator) {
-			$found = preg_match( '#LocalSettings.*?\.php#', $current->getFilename() );
+			$found = preg_match( '#LocalSettings.*?\.php$#', $current->getFilename() );
 			return $found === 1;
 		} );
 
