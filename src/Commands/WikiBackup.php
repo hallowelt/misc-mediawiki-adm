@@ -68,6 +68,12 @@ class WikiBackup extends Command {
 	private $maxBackupFiles = -1;
 
 	/**
+	 *
+	 * @var string
+	 */
+	private $targetFilename = '';
+
+	/**
 	 * @var IBackupProfile
 	 */
 	protected $profile = null;
@@ -118,6 +124,12 @@ class WikiBackup extends Command {
 					Input\InputOption::VALUE_OPTIONAL,
 					'Specifies a profile for the back-up'
 				),
+				new Input\InputOption(
+					'target-filename',
+					null,
+					Input\InputOption::VALUE_OPTIONAL,
+					'Specifies a filename of the backup file, within the `--dest` directory. HINT: It will be appended with the current timestamp, if `--omit-timestamp` is not set.'
+				),
 			] ) );
 	}
 
@@ -130,6 +142,7 @@ class WikiBackup extends Command {
 		$this->dest = realpath( $input->getOption( 'dest' ) );
 		$this->omitTimestamp = $input->getOption( 'omit-timestamp' );
 		$this->maxBackupFiles = (int) $input->getOption( 'max-backup-files' );
+		$this->targetFilename = $input->getOption( 'target-filename' ) ?? '';
 
 		$this->loadProfile( $input->getOption( 'profile' ) );
 
@@ -216,8 +229,12 @@ class WikiBackup extends Command {
 			$timestamp = date( 'YmdHis' );
 			$suffix = "-$timestamp";
 		}
+		$targetFileName = $this->targetFilename;
+		if ( empty( $targetFileName ) ) {
+			$targetFileName = $this->wikiName;
+		}
 
-		return "{$this->dest}/{$this->wikiName}{$suffix}.zip";
+		return "{$this->dest}/{$targetFileName}{$suffix}.zip";
 	}
 
 	protected function addImagesFolder() {
