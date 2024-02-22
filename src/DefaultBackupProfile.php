@@ -13,7 +13,8 @@ class DefaultBackupProfile implements IBackupProfile {
 				'thumb',
 				'temp',
 				'cache'
-			]
+			],
+			'additional-files' => []
 		],
 		'db-options' => [
 			'skip-tables' => [

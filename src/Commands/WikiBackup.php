@@ -151,6 +151,7 @@ class WikiBackup extends Command {
 		$this->initZipFile();
 		$this->addSettingsFiles();
 		$this->addImagesFolder();
+		$this->addAdditionalFiles();
 		$this->dumpDatabase();
 
 		$this->zip->close();
@@ -398,5 +399,30 @@ class WikiBackup extends Command {
 	private function removeOldBackups() {
 		$backupdirManager = new BackupDirManager( $this->dest, $this->output );
 		$backupdirManager->removeOldFiles( $this->wikiName, $this->maxBackupFiles );
+	}
+
+	private function addAdditionalFiles() {
+		$filesystemOptions = $this->profile->getFSBackupOptions();
+		$additionalFiles = $filesystemOptions['additional-files'] ?? [];
+		$progressBar = new ProgressBar(
+			$this->output,
+			count( $additionalFiles )
+		);
+		$quotedMediaWikiRoot = preg_quote( $this->mediawikiRoot );
+		$mediaWikiRootStripPattern = "#^$quotedMediaWikiRoot#";
+		$this->output->writeln( "Adding 'additional files' ..." );
+		foreach( $additionalFiles as $additionalFile ) {
+			$path = realpath( $this->mediawikiRoot . "/$additionalFile" );
+			if ( $path === false ) {
+				$this->output->writeln( "<error>File '$additionalFile' not found!</error>" );
+				continue;
+			}
+			$localPath = preg_replace( $mediaWikiRootStripPattern, '', $path  );
+			$localPath = trim( $localPath, '/' );
+			$this->zip->addFile( $path, "filesystem/$localPath" );
+			$progressBar->advance();
+		}
+		$progressBar->finish();
+		$this->output->write( "\n" );
 	}
 }
