@@ -134,7 +134,7 @@ class WikiBackup extends Command {
 		$this->loadProfile( $input->getOption( 'profile' ) );
 
 		$this->readInSettingsFile();
-		$this->ceckDatabaseConnection();
+		$this->checkDatabaseConnection();
 		$this->initZipFile();
 		$this->addSettingsFiles();
 		$this->addImagesFolder();
@@ -157,7 +157,7 @@ class WikiBackup extends Command {
 	protected $dbprefix = '';
 
 	protected function readInSettingsFile() {
-		$profileData = $this->profile->getDBBackupOptions();;
+		$profileData = $this->profile->getDBBackupOptions();
 		if ( isset( $profileData['connection'] ) ) {
 			$connection = $profileData['connection'];
 			$this->dbname = $connection['dbname'] ?? '';
@@ -186,7 +186,7 @@ class WikiBackup extends Command {
 		}
 	}
 
-	private function ceckDatabaseConnection() {
+	private function checkDatabaseConnection() {
 		$this->output->writeln( "Checking database connection ..." );
 		$this->output->writeln( "Connecting to '{$this->dbserver}/{$this->dbname}' as {$this->dbname}..." );
 		try {
