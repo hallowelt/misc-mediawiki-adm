@@ -14,27 +14,8 @@ class SettingsFileIterator extends AppendIterator {
 	public function __construct( $dir ) {
 		parent::__construct();
 
-		$this->appendBlueSpiceFoundationConfig( $dir );
 		$this->appendSettingsD( $dir );
 		$this->appendRoot( $dir );
-	}
-
-	/**
-	 * Existence of "$dir/extensions/BlueSpiceFoundation/config" is optional
-	 * @param string $dir
-	 */
-	private function appendBlueSpiceFoundationConfig( $dir ) {
-		try {
-			$blueSpiceFoundationConfig = new RecursiveIteratorIterator(
-					new RecursiveDirectoryIterator(
-						"$dir/extensions/BlueSpiceFoundation/config",
-						FilesystemIterator::SKIP_DOTS
-					)
-			);
-			$this->append( $blueSpiceFoundationConfig );
-		} catch( Exception $ex ) {
-
-		}
 	}
 
 	/**
