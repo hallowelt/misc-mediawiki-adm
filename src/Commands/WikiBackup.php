@@ -299,17 +299,17 @@ class WikiBackup extends Command {
 			}
 		}
 		$progressBar = new ProgressBar(
-				$this->output,
-				count( $customFilesToBackup )
-			);
-			$this->output->writeln( "Adding 'custom-paths' ..." );
-			foreach( $customFilesToBackup as $customFile ) {
-				$localPath = preg_replace( '#^' . preg_quote( $this->mediawikiRoot ) . '#', '', $customFile );
-				$this->zip->addFile( $customFile, "filesystem/$localPath" );
-				$progressBar->advance();
-			}
-			$progressBar->finish();
-			$this->output->write( "\n" );
+			$this->output,
+			count( $customFilesToBackup )
+		);
+		$this->output->writeln( "Adding 'custom-paths' ..." );
+		foreach( $customFilesToBackup as $customFile ) {
+			$localPath = preg_replace( '#^' . preg_quote( $this->mediawikiRoot ) . '#', '', $customFile );
+			$this->zip->addFile( $customFile, "filesystem/$localPath" );
+			$progressBar->advance();
+		}
+		$progressBar->finish();
+		$this->output->write( "\n" );
 	}
 
 	protected $tmpDumpFilepath = '';
