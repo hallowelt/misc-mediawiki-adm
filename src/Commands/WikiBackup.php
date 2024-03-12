@@ -138,6 +138,7 @@ class WikiBackup extends Command {
 		$this->initZipFile();
 		$this->addSettingsFiles();
 		$this->addImagesFolder();
+		$this->addCustomFilesAndFolders();
 		$this->dumpDatabase();
 
 		$this->zip->close();
@@ -268,6 +269,47 @@ class WikiBackup extends Command {
 
 		$progressBar->finish();
 		$this->output->write( "\n" );
+	}
+
+	private function addCustomFilesAndFolders() {
+		$filesystemOptions = $this->profile->getFSBackupOptions();
+		$customPaths = $filesystemOptions['include-custom-paths'] ?? [];
+		if ( empty( $customPaths )	) {
+			return;
+		}
+		$customFilesToBackup = [];
+		foreach( $customPaths as $customPath ) {
+			$customPath = "{$this->mediawikiRoot}/$customPath";
+			if( !file_exists( $customPath ) ) {
+				$this->output->writeln( "Warning: Custom path '$customPath' does not exist!" );
+				continue;
+			}
+			if( is_file( $customPath ) ) {
+				$customFilesToBackup[] = $customPath;
+				continue;
+			}
+			$customDirectoryIterator = new RecursiveIteratorIterator(
+				new RecursiveDirectoryIterator( $customPath )
+			);
+			foreach( $customDirectoryIterator as $fileInfo ) {
+				if( $fileInfo->isDir() ) {
+					continue;
+				}
+				$customFilesToBackup[] = $fileInfo->getPathname();
+			}
+		}
+		$progressBar = new ProgressBar(
+				$this->output,
+				count( $customFilesToBackup )
+			);
+			$this->output->writeln( "Adding 'custom-paths' ..." );
+			foreach( $customFilesToBackup as $customFile ) {
+				$localPath = preg_replace( '#^' . preg_quote( $this->mediawikiRoot ) . '#', '', $customFile );
+				$this->zip->addFile( $customFile, "filesystem/$localPath" );
+				$progressBar->advance();
+			}
+			$progressBar->finish();
+			$this->output->write( "\n" );
 	}
 
 	protected $tmpDumpFilepath = '';
