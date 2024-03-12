@@ -8,6 +8,7 @@ class DefaultBackupProfile implements IBackupProfile {
 	 * @var array
 	 */
 	protected $data = [
+		'target-filename' => '',
 		'fs-options' => [
 			'include-custom-paths' => [
 				'extensions/SemanticMediaWiki/.smw.json'
