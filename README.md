@@ -59,6 +59,10 @@ With the contents of `some-profile.json` to be
 ```
 {
     "fs-options": {
+        "include-custom-paths": [
+            "data",
+            "meta.json"
+        ],
         "skip-image-paths": [
             "cache",
             "temp"
@@ -67,7 +71,7 @@ With the contents of `some-profile.json` to be
 }
 ```
 
-This will exclude `$IP/images/cache` and `$IP/images/temp` from back-up.
+This will include `$IP/data` and `$IP/meta.json` to and exclude `$IP/images/cache` and `$IP/images/temp` from back-up.
 
 Also, you may want to exclude some data tables. It can be done that way:
 ```

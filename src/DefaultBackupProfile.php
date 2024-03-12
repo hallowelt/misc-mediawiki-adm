@@ -9,6 +9,9 @@ class DefaultBackupProfile implements IBackupProfile {
 	 */
 	protected $data = [
 		'fs-options' => [
+			'include-custom-paths' => [
+				'extensions/SemanticMediaWiki/.smw.json'
+			],
 			'skip-image-paths' => [
 				'thumb',
 				'temp',
