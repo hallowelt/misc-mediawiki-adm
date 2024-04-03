@@ -229,7 +229,8 @@ class WikiBackup extends Command {
 			$filename = $this->wikiName;
 		}
 		$profileOptions = $this->profile->getOptions();
-		if ( isset( $profileOptions['target-filename'] ) && !empty( $profileOptions['target-filename'] ) {
+		if ( isset( $profileOptions['target-filename'] ) &&
+			!empty( $profileOptions['target-filename'] ) ) {
 			$filename = $profileOptions['target-filename'];
 		}
 
