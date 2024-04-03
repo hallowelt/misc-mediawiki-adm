@@ -171,7 +171,7 @@ class WikiBackup extends Command {
 		$settings = $settingsReader->getSettingsFromDirectory( $this->mediawikiRoot );
 
 		$requiredFields = [
-			'dbname', 'dbpassword', 'dbuser', 'dbserver', 'wikiName'
+			'dbname', 'dbpassword', 'dbuser', 'dbserver'
 		];
 
 		foreach( $requiredFields as $requiredField ) {
@@ -218,7 +218,22 @@ class WikiBackup extends Command {
 			$suffix = "-$timestamp";
 		}
 
-		return "{$this->dest}/{$this->wikiName}{$suffix}.zip";
+		$targetFilename = $this->getTargetFilename();
+
+		return "{$this->dest}/{$targetFilename}{$suffix}.zip";
+	}
+
+	private function getTargetFilename() {
+		$filename = 'mediawiki';
+		if ( !empty( $this->wikiName ) ) {
+			$filename = $this->wikiName;
+		}
+		$profileOptions = $this->profile->getOptions();
+		if ( isset( $profileOptions['target-filename'] ) && !empty( $profileOptions['target-filename'] ) {
+			$filename = $profileOptions['target-filename'];
+		}
+
+		return $filename;
 	}
 
 	protected function addImagesFolder() {
