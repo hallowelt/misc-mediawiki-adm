@@ -141,8 +141,11 @@ class WikiBackup extends Command {
 		$this->addCustomFilesAndFolders();
 		$this->dumpDatabase();
 
-		$this->zip->close();
+		$success = $this->zip->close();
 		$this->cleanUp();
+		if ( !$success ) {
+			throw new \Exception( "Could not close ZIP file!" );
+		}
 
 		$this->removeOldBackups();
 
@@ -205,10 +208,13 @@ class WikiBackup extends Command {
 		$destFilePath = $this->makeDestFilepath();
 		$this->output->writeln( "Creating file '$destFilePath' ..." );
 		$this->zip = new ZipArchive();
-		$this->zip->open(
+		$success = $this->zip->open(
 			$destFilePath,
 			ZipArchive::CREATE|ZipArchive::OVERWRITE
 		);
+		if ( !$success ) {
+			throw new \Exception( "Could not create ZIP file '$destFilePath'!" );
+		}
 	}
 
 	protected function makeDestFilepath() {
