@@ -3,6 +3,8 @@
 namespace MWStake\MediaWiki\CliAdm\Commands;
 
 use DateTime;
+use Exception;
+use MWStake\MediaWiki\CliAdm\FarmInstanceSettingsReader;
 use MWStake\MediaWiki\CliAdm\IBackupProfile;
 use MWStake\MediaWiki\CliAdm\JSONBackupProfile;
 use MWStake\MediaWiki\CliAdm\DefaultBackupProfile;
@@ -72,6 +74,14 @@ class WikiBackup extends Command {
 	 */
 	protected $profile = null;
 
+	/** @var bool */
+	private $isFarmContext = false;
+	/** @var string */
+	private $instanceName;
+
+	/** @var array */
+	private $skipDbPrefixes = [];
+
 	/**
 	 *
 	 * @var ZipArchive
@@ -134,6 +144,16 @@ class WikiBackup extends Command {
 		$this->loadProfile( $input->getOption( 'profile' ) );
 
 		$this->readInSettingsFile();
+		$this->doBackup();
+
+		$this->output->writeln( '<info>--> Done.</info>' );
+		$this->outputEndInfo( $output );
+	}
+
+	private function doBackup() {
+		if ( $this->isFarmContext ) {
+			$this->output->writeln( "<info> --> Backing up farm instance $this->instanceName</info>" );
+		}
 		$this->checkDatabaseConnection();
 		$this->initZipFile();
 		$this->addSettingsFiles();
@@ -145,12 +165,8 @@ class WikiBackup extends Command {
 		$this->cleanUp();
 
 		$this->removeOldBackups();
-
-		$this->output->writeln( '<info>--> Done.</info>' );
-		$this->outputEndInfo( $output );
 	}
 
-	protected $wikiName = '';
 	protected $dbname = '';
 	protected $dbuser = '';
 	protected $dbpassword = '';
@@ -161,30 +177,108 @@ class WikiBackup extends Command {
 		$profileData = $this->profile->getDBBackupOptions();
 		if ( isset( $profileData['connection'] ) ) {
 			$connection = $profileData['connection'];
-			$this->dbname = $connection['dbname'] ?? '';
-			$this->dbuser = $connection['dbuser'] ?? '';
-			$this->dbpassword = $connection['dbpassword'] ?? '';
-			$this->dbserver = $connection['dbserver'] ?? '';
+			$this->dbname = $connection['dbname'] ?? null;
+			$this->dbuser = $connection['dbuser'] ?? null;
+			$this->dbpassword = $connection['dbpassword'] ?? null;
+			$this->dbserver = $connection['dbserver'] ?? null;
+			$this->dbprefix = $connection['dbprefix'] ?? null;
 		}
 
 		$settingsReader = new SettingsReader();
 		$settings = $settingsReader->getSettingsFromDirectory( $this->mediawikiRoot );
 
 		$requiredFields = [
-			'dbname', 'dbpassword', 'dbuser', 'dbserver'
+			'dbname', 'dbpassword', 'dbuser', 'dbserver', 'dbprefix'
 		];
 
 		foreach( $requiredFields as $requiredField ) {
-			if( !empty( $this->{$requiredField} ) ) {
+			if ( $this->{$requiredField} ) {
 				// Already set by the provided backup-profile
 				continue;
 			}
-			if( empty( $settings[$requiredField] ) ) {
+			if( !isset( $settings[$requiredField] ) ) {
 				throw new \Exception( "Required information '$requiredField' "
 						. "could not be extracted!" );
 			}
 			$this->{$requiredField} = $settings[$requiredField];
 		}
+		$farmOptions = $this->profile->getFarmOptions();
+		if ( $farmOptions && $farmOptions['instance-name'] ) {
+			$this->setupFarmEnvironment( $farmOptions );
+		}
+	}
+
+	private function setupFarmEnvironment( array $options ) {
+		$this->output->writeln( "Setting up farm environment ..." );
+		$this->isFarmContext = true;
+		$this->instanceName = $options['instance-name'];
+		$instancesDir = $options['instances-dir'] ??
+			rtrim( $this->mediawikiRoot, '/' ) . '/_sf_instances/';
+
+		$settingsTable = 'simple_farmer_instances';
+		if ( $this->dbprefix ) {
+			$settingsTable = $this->dbprefix . $settingsTable;
+		}
+		try {
+			$mainPdo = new \PDO(
+				"mysql:host=$this->dbserver;dbname=$this->dbname",
+				$this->dbuser,
+				$this->dbpassword
+			);
+		} catch( \PDOException $ex ) {
+			throw new Exception( "Could not connect to management database: " . $ex->getMessage() );
+		}
+
+		$settingsReader = new FarmInstanceSettingsReader( $mainPdo, $settingsTable );
+		if ( $this->instanceName === '*' ) {
+			$this->output->writeln( "Backing up all instances ..." );
+			// Backup all instances
+			$mainDbName = $this->dbname;
+			$mainDbPrefix = $this->dbprefix;
+			$originalMWRoot = $this->mediawikiRoot;
+			$activeInstances = $settingsReader->getAllActiveInstances();
+			foreach ( $activeInstances as $instanceName ) {
+				$this->instanceName = $instanceName;
+				$this->mediawikiRoot = "$instancesDir/$instanceName";
+				if ( $this->setupSingleFarmInstance( $settingsReader, $instanceName ) ) {
+					try {
+						$this->doBackup();
+					} catch ( Exception $ex ) {
+						$this->output->writeln( "Error backing up instance $instanceName: " . $ex->getMessage() );
+					}
+
+				} else {
+					$this->output->writeln( "Skipping instance $instanceName, cannot read settings" );
+				}
+			}
+			$this->output->writeln( "<info> --> Backing up main instance ...</info>" );
+			// Backup main instance at the end
+			$this->dbname = $mainDbName;
+			$this->dbprefix = $mainDbPrefix;
+			$this->mediawikiRoot = $originalMWRoot;
+			$this->isFarmContext = false;
+			$this->skipDbPrefixes = $settingsReader->getAllInstancePrefixes( $this->dbname );
+		} else {
+			$this->mediawikiRoot = "$instancesDir/$this->instanceName";
+			if ( !$this->setupSingleFarmInstance( $settingsReader, $this->instanceName ) ) {
+				throw new Exception( "Could not read settings for instance '{$this->instanceName}'" );
+			}
+		}
+	}
+
+	/**
+	 * @param FarmInstanceSettingsReader $settingsReader
+	 * @param string $instanceName
+	 * @return bool
+	 */
+	private function setupSingleFarmInstance( FarmInstanceSettingsReader $settingsReader, string $instanceName ) {
+		$settings = $settingsReader->getSettings( $instanceName );
+		if ( !$settings ) {
+			return false;
+		}
+		$this->dbname = $settings['dbname'];
+		$this->dbprefix = $settings['dbprefix'];
+		return true;
 	}
 
 	private function checkDatabaseConnection() {
@@ -219,22 +313,18 @@ class WikiBackup extends Command {
 		}
 
 		$targetFilename = $this->getTargetFilename();
-
 		return "{$this->dest}/{$targetFilename}{$suffix}.zip";
 	}
 
-	private function getTargetFilename() {
-		$filename = 'mediawiki';
-		if ( !empty( $this->wikiName ) ) {
-			$filename = $this->wikiName;
+	/**
+	 * @return string
+	 */
+	protected function getTargetFilename() {
+		if ( $this->isFarmContext ) {
+			return $this->instanceName;
 		}
-		$profileOptions = $this->profile->getOptions();
-		if ( isset( $profileOptions['target-filename'] ) &&
-			!empty( $profileOptions['target-filename'] ) ) {
-			$filename = $profileOptions['target-filename'];
-		}
-
-		return $filename;
+		$default = $this->dbname . ( $this->dbprefix ? "-{$this->dbprefix}" : '' );
+		return $this->profile->getOption( 'target-filename', $default );
 	}
 
 	protected function addImagesFolder() {
@@ -347,9 +437,17 @@ class WikiBackup extends Command {
 			'no-data' => array_map( function( $item ) use ( $skipTables ) {
 				return $this->dbprefix.$item;
 			}, $skipTables ),
-			'skip-definer' => true
+			'skip-definer' => true,
 		];
+		if ( !empty( $this->dbprefix ) ) {
+			$dumpSettings['include-tables'] = $this->getTablesWithPrefix( [ $this->dbprefix ] );
+		}
+		$dumpSettings['exclude-tables'] = array_merge(
+			$dumpSettings['exclude-tables'] ?? [],
+			$this->getTablesWithPrefix( $this->skipDbPrefixes, true )
+		);
 
+		// TODO: Dump only with given prefix
 		$dump = new Mysqldump(
 			"mysql:host={$this->dbserver};dbname={$this->dbname}",
 			$this->dbuser,
@@ -438,6 +536,37 @@ class WikiBackup extends Command {
 
 	private function removeOldBackups() {
 		$backupdirManager = new BackupDirManager( $this->dest, $this->output );
-		$backupdirManager->removeOldFiles( $this->wikiName, $this->maxBackupFiles );
+		$backupdirManager->removeOldFiles( $this->getTargetFilename(), $this->maxBackupFiles );
+	}
+
+	/**
+	 * @param array $prefixes
+	 * @param bool $includeViews
+	 * @return array
+	 */
+	private function getTablesWithPrefix( array $prefixes, bool $includeViews = false ): array {
+		$tables = [];
+		$pdo = new \PDO(
+			"mysql:host={$this->dbserver};dbname={$this->dbname}",
+			$this->dbuser,
+			$this->dbpassword
+		);
+		$query = "SHOW FULL TABLES FROM `{$this->dbname}`";
+		if ( !$includeViews ) {
+			$query .= "  WHERE TABLE_TYPE NOT LIKE 'VIEW'";
+		}
+
+		$res = $pdo->query( $query );
+		while ( $row = $res->fetch() ) {
+			$tableName = $row[0];
+			foreach ( $prefixes as $prefix ) {
+				if ( strpos( $tableName, $prefix ) === 0 ) {
+					$tables[] = $tableName;
+					break;
+				}
+			}
+		}
+		return $tables;
+
 	}
 }

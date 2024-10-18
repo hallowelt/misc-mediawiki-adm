@@ -46,7 +46,21 @@ class DefaultBackupProfile implements IBackupProfile {
 	/**
 	 * @inheritDoc
 	 */
+	public function getFarmOptions(): ?array {
+		return $this->getOption( 'farm-options' );
+	}
+
+	/**
+	 * @inheritDoc
+	 */
 	public function getOptions() {
 		return $this->data;
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function getOption( string $name, $default = null ) {
+		return !empty( $this->data[$name] ) ? $this->data[$name] : $default;
 	}
 }

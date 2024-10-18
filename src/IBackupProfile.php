@@ -22,10 +22,22 @@ interface IBackupProfile {
 	public function getDBBackupOptions();
 
 	/**
+	 * @return array|null
+	 */
+	public function getFarmOptions(): ?array;
+
+	/**
 	 * Key "db-options" should contain DB backup options.
 	 * Key "fs-options" should contain filesystem backup options.
 	 *
 	 * @return array
 	 */
 	public function getOptions();
+
+	/**
+	 * @param string $name
+	 * @param mixed|null $default
+	 * @return mixed
+	 */
+	public function getOption( string $name, $default = null );
 }
