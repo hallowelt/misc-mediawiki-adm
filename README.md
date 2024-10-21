@@ -92,7 +92,7 @@ Also, you may want to exclude some data tables. It can be done that way:
 ```
 
 
-### Backing up/restoring farming instance
+### Backing up farming instance
 
 Important: Database connection params, whether read from setting file or specified in `profile`, must refer to the
 main (`w`) wiki database, as that DB holds information on all instances.
@@ -137,3 +137,30 @@ with `profile.json`:
 ```
 
 will export all active instance of the farm, and then export `w` itself
+
+### Restore wiki farm instance
+
+**Only instances that were backed up using this tool can be restored safely!**
+
+Since instance settings are stored in DB, when backing up, extra file `filesystem/settings.json` will be generated,
+which is then used on restore.
+
+When restoring a farm instance, profile file __must__ be used, with `db-options.connection` set
+to the main wiki database. Optionally, set `farm-options.instances-dir` to the root directory that holds instances.
+
+```json
+{
+	"db-options": {
+		"connection": {
+			"dbserver": "127.0.0.1",
+			"dbuser": "root",
+			"dbpassword": "...",
+			"dbname": "w"
+		}
+	},
+    "farm-options": {
+        "instances-dir": "/path/to/instances"
+    }
+}
+```
+
