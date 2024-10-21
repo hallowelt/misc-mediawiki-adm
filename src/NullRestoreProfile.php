@@ -2,8 +2,6 @@
 
 namespace MWStake\MediaWiki\CliAdm;
 
-use MWStake\MediaWiki\CliAdm\IRestoreProfile;
-
 class NullRestoreProfile implements IRestoreProfile {
 
 	/**

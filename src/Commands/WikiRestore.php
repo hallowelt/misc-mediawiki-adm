@@ -3,6 +3,7 @@
 namespace MWStake\MediaWiki\CliAdm\Commands;
 
 use DateTime;
+use MWStake\MediaWiki\CliAdm\FarmInstanceSettingsManager;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
 use Symfony\Component\Console\Command\Command;
@@ -81,6 +82,23 @@ class WikiRestore extends Command {
 	protected $filesystem = null;
 
 	/**
+	 * @var bool
+	 */
+	private $isFarmContext = false;
+
+	/**
+	 *
+	 * @var FarmInstanceSettingsManager
+	 */
+	private $farmSettingsManager = null;
+
+	/**
+	 *
+	 * @var string
+	 */
+	private $instanceName = '';
+
+	/**
 	 *
 	 * @var array
 	 */
@@ -139,6 +157,9 @@ class WikiRestore extends Command {
 		$this->readWikiConfig();
 		$this->importFilesystem();
 		$this->importDatabase();
+		if ( $this->isFarmContext ) {
+			$this->farmSettingsManager->setInstanceSetting( $this->instanceName, 'sfi_status', 'ready' );
+		}
 		$this->removeTempWorkDir();
 		$this->outputEndInfo( $output );
 	}
@@ -256,6 +277,49 @@ class WikiRestore extends Command {
 		$this->settings = $settingsReader->getSettingsFromDirectory(
 			"{$this->tmpWorkingDir}/filesystem"
 		);
+		$this->setupFarmEnvironment();
+	}
+
+	/**
+	 * @return void
+	 * @throws Exception
+	 */
+	private function setupFarmEnvironment() {
+		$instanceSettingsFile = "$this->tmpWorkingDir/filesystem/settings.json";
+		if ( !file_exists( $instanceSettingsFile ) ) {
+			return;
+		}
+		$mainDbConnectionOptions = $this->profile->getDBImportOptions()['connection'] ?? null;
+		if ( !$mainDbConnectionOptions ) {
+			throw new Exception(
+				"No main database connection options found in profile, but it's required when in farm context"
+			);
+		}
+		$host = $mainDbConnectionOptions['dbserver'] ?? 'localhost';
+		$mainPdo = new PDO(
+			"mysql:host=$host;dbname={$mainDbConnectionOptions['dbname']}",
+			$mainDbConnectionOptions['dbuser'],
+			$mainDbConnectionOptions['dbpassword']
+		);
+		$settingsTable = ( $mainDbConnectionOptions['dbprefix' ] ?? '' ) . 'simple_farmer_instances';
+		$this->farmSettingsManager = new FarmInstanceSettingsManager( $mainPdo, $settingsTable );
+		$settings = $this->farmSettingsManager->getSettingsFromFile( $instanceSettingsFile );
+		if ( !$settings ) {
+			throw new Exception( "Failed to read settings.json for farm instance" );
+		}
+		$farmOptions = $this->profile->getOptions()['farm-options'] ?? null;
+		$instancesDir = $farmOptions['instances-dir'] ?? $this->mediawikiRoot . '/_sf_instances';
+		$this->instanceName = $settings['path'];
+		$this->settings['dbname'] = $settings['dbname'];
+		$this->settings['dbserver'] = $mainDbConnectionOptions['dbserver'];
+		$this->settings['dbuser'] = $mainDbConnectionOptions['dbuser'];
+		$this->settings['dbpassword'] = $mainDbConnectionOptions['dbpassword'];
+		$this->settings['dbprefix'] = $settings['dbprefix'];
+		$this->settings['wikiName'] = $settings['displayName'];
+		$this->mediawikiRoot = $instancesDir . '/' . $settings['path'];
+		if ( !$this->farmSettingsManager->assertInstanceEntryInitializedFromFile( $this->instanceName, $instanceSettingsFile ) ) {
+			throw new Exception( "Failed to init farm entry" );
+		}
 	}
 
 	/**
@@ -269,9 +333,6 @@ class WikiRestore extends Command {
 			'dbuser' => $this->settings['dbuser'],
 			'dbpassword' => $this->settings['dbpassword']
 		];
-
-		$profileDBOptions = $this->profile->getDBImportOptions();
-		$connection = $profileDBOptions['connection'] + $connection;
 
 		$dsn = "mysql:host={$connection['dbserver']}";
 		$pdo = new PDO( $dsn, $connection['dbuser'], $connection['dbpassword'] );

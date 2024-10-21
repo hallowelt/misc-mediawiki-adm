@@ -90,3 +90,77 @@ Also, you may want to exclude some data tables. It can be done that way:
     }
 }
 ```
+
+
+### Backing up farming instance
+
+Important: Database connection params, whether read from setting file or specified in `profile`, must refer to the
+main (`w`) wiki database, as that DB holds information on all instances.
+
+Commands are the same as for single wiki, but additional parameters in `profile.json` are required
+- Set all parameters as if backing up/restoring the main farm wiki (`w`, management instance)
+- Add section `farm-options` that has following items
+
+```
+{
+    "farm-options": {
+        "instances-dir": "/var/www/w/_sf_instance",
+        "instance-name": "wiki-name"
+    }
+}
+```
+
+Note: `instances-dir` - path to the root directory that holds instances - optional, if not set, it will use `--mediawiki-root/_sf_instances/`
+
+#### Backing up whole farm
+    
+    mediawiki-adm wiki-backup \
+        --mediawiki-root /var/www/w \
+        --dest /mnt/backup/
+
+with `profile.json`:
+
+```
+{
+    "db-options": {
+		"connection": {
+			"dbserver": "testdbserver",
+			"dbuser": "testdbuser",
+			"dbpassword": "testdbpassword"
+			"dbname": "w"
+		}
+	},  
+    "farm-options": {
+        "instance-name": "*"
+    }
+}
+```
+
+will export all active instance of the farm, and then export `w` itself
+
+### Restore wiki farm instance
+
+**Only instances that were backed up using this tool can be restored safely!**
+
+Since instance settings are stored in DB, when backing up, extra file `filesystem/settings.json` will be generated,
+which is then used on restore.
+
+When restoring a farm instance, profile file __must__ be used, with `db-options.connection` set
+to the main wiki database. Optionally, set `farm-options.instances-dir` to the root directory that holds instances.
+
+```json
+{
+	"db-options": {
+		"connection": {
+			"dbserver": "127.0.0.1",
+			"dbuser": "root",
+			"dbpassword": "...",
+			"dbname": "w"
+		}
+	},
+    "farm-options": {
+        "instances-dir": "/path/to/instances"
+    }
+}
+```
+

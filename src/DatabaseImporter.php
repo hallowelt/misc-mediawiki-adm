@@ -96,7 +96,9 @@ class DatabaseImporter {
 				try {
 					$this->pdo->beginTransaction();
 					$this->pdo->exec( $tmpLine );
-					$this->pdo->commit();
+					if ($this->pdo->inTransaction() ) {
+						$this->pdo->commit();
+					}
 				} catch (PDOException $e) {
 					$this->output->writeln(
 						"<error>Error performing Query: " . $tmpLine . ": "
@@ -114,7 +116,6 @@ class DatabaseImporter {
 		if ($errorDetect) {
 			return false;
 		}
-
 	}
 
 	private function isCommentLine( $line ) {
