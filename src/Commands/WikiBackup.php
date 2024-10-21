@@ -4,7 +4,7 @@ namespace MWStake\MediaWiki\CliAdm\Commands;
 
 use DateTime;
 use Exception;
-use MWStake\MediaWiki\CliAdm\FarmInstanceSettingsReader;
+use MWStake\MediaWiki\CliAdm\FarmInstanceSettingsManager;
 use MWStake\MediaWiki\CliAdm\IBackupProfile;
 use MWStake\MediaWiki\CliAdm\JSONBackupProfile;
 use MWStake\MediaWiki\CliAdm\DefaultBackupProfile;
@@ -81,6 +81,9 @@ class WikiBackup extends Command {
 
 	/** @var array */
 	private $skipDbPrefixes = [];
+
+	/** @var FarmInstanceSettingsManager|null */
+	private $farmSettingsReader = null;
 
 	/**
 	 *
@@ -229,18 +232,18 @@ class WikiBackup extends Command {
 			throw new Exception( "Could not connect to management database: " . $ex->getMessage() );
 		}
 
-		$settingsReader = new FarmInstanceSettingsReader( $mainPdo, $settingsTable );
+		$this->farmSettingsReader = new FarmInstanceSettingsManager( $mainPdo, $settingsTable );
 		if ( $this->instanceName === '*' ) {
 			$this->output->writeln( "Backing up all instances ..." );
 			// Backup all instances
 			$mainDbName = $this->dbname;
 			$mainDbPrefix = $this->dbprefix;
 			$originalMWRoot = $this->mediawikiRoot;
-			$activeInstances = $settingsReader->getAllActiveInstances();
+			$activeInstances = $this->farmSettingsReader->getAllActiveInstances();
 			foreach ( $activeInstances as $instanceName ) {
 				$this->instanceName = $instanceName;
 				$this->mediawikiRoot = "$instancesDir/$instanceName";
-				if ( $this->setupSingleFarmInstance( $settingsReader, $instanceName ) ) {
+				if ( $this->setupSingleFarmInstance( $this->farmSettingsReader, $instanceName ) ) {
 					try {
 						$this->doBackup();
 					} catch ( Exception $ex ) {
@@ -257,22 +260,21 @@ class WikiBackup extends Command {
 			$this->dbprefix = $mainDbPrefix;
 			$this->mediawikiRoot = $originalMWRoot;
 			$this->isFarmContext = false;
-			$this->skipDbPrefixes = $settingsReader->getAllInstancePrefixes( $this->dbname );
+			$this->skipDbPrefixes = $this->farmSettingsReader->getAllInstancePrefixes( $this->dbname );
 		} else {
 			$this->mediawikiRoot = "$instancesDir/$this->instanceName";
-			if ( !$this->setupSingleFarmInstance( $settingsReader, $this->instanceName ) ) {
-				throw new Exception( "Could not read settings for instance '{$this->instanceName}'" );
+			if ( !$this->setupSingleFarmInstance( $this->instanceName ) ) {
+				throw new Exception( "Could not read settings for instance '$this->instanceName'" );
 			}
 		}
 	}
 
 	/**
-	 * @param FarmInstanceSettingsReader $settingsReader
 	 * @param string $instanceName
 	 * @return bool
 	 */
-	private function setupSingleFarmInstance( FarmInstanceSettingsReader $settingsReader, string $instanceName ) {
-		$settings = $settingsReader->getSettings( $instanceName );
+	private function setupSingleFarmInstance( string $instanceName ) {
+		$settings = $this->farmSettingsReader->getSettings( $instanceName );
 		if ( !$settings ) {
 			return false;
 		}
@@ -378,10 +380,40 @@ class WikiBackup extends Command {
 	}
 
 	private function addCustomFilesAndFolders() {
+		$toBackup = $this->getCustomFilesToBackup();
+		$backupCount = count( $toBackup );
+		if ( $this->isFarmContext ) {
+			$backupCount++;
+			$settings =  $this->farmSettingsReader->getFullSettings( $this->instanceName );
+			if ( $settings === null ) {
+				throw new Exception( "Could not read settings for instance '$this->instanceName'" );
+			}
+			$res = file_put_contents(
+				$this->mediawikiRoot . '/settings.json',
+				json_encode( $settings, JSON_PRETTY_PRINT )
+			);
+			if ( !$res ) {
+				throw new Exception( "Could not write instance settings file" );
+			}
+			$toBackup[] = $this->mediawikiRoot . '/settings.json';
+		}
+
+		$progressBar = new ProgressBar( $this->output, $backupCount );
+		$this->output->writeln( "Adding 'custom-paths' ..." );
+		foreach( $toBackup as $customFile ) {
+			$localPath = preg_replace( '#^' . preg_quote( $this->mediawikiRoot ) . '#', '', $customFile );
+			$this->zip->addFile( $customFile, "filesystem/$localPath" );
+			$progressBar->advance();
+		}
+		$progressBar->finish();
+		$this->output->write( "\n" );
+	}
+
+	private function getCustomFilesToBackup(): array {
 		$filesystemOptions = $this->profile->getFSBackupOptions();
 		$customPaths = $filesystemOptions['include-custom-paths'] ?? [];
 		if ( empty( $customPaths )	) {
-			return;
+			return [];
 		}
 		$customFilesToBackup = [];
 		foreach( $customPaths as $customPath ) {
@@ -404,18 +436,7 @@ class WikiBackup extends Command {
 				$customFilesToBackup[] = $fileInfo->getPathname();
 			}
 		}
-		$progressBar = new ProgressBar(
-			$this->output,
-			count( $customFilesToBackup )
-		);
-		$this->output->writeln( "Adding 'custom-paths' ..." );
-		foreach( $customFilesToBackup as $customFile ) {
-			$localPath = preg_replace( '#^' . preg_quote( $this->mediawikiRoot ) . '#', '', $customFile );
-			$this->zip->addFile( $customFile, "filesystem/$localPath" );
-			$progressBar->advance();
-		}
-		$progressBar->finish();
-		$this->output->write( "\n" );
+		return $customFilesToBackup;
 	}
 
 	protected $tmpDumpFilepath = '';
