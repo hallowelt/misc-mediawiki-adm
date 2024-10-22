@@ -260,6 +260,8 @@ class WikiBackup extends Command {
 			$this->dbprefix = $mainDbPrefix;
 			$this->mediawikiRoot = $originalMWRoot;
 			$this->isFarmContext = false;
+			// Once every instance is backed up, make sure to no export any of those tables when backing up
+			// the main instances, so get all instance db prefixes, so we can skip them
 			$this->skipDbPrefixes = $this->farmSettingsReader->getAllInstancePrefixes( $this->dbname );
 		} else {
 			$this->mediawikiRoot = "$instancesDir/$this->instanceName";
@@ -464,6 +466,7 @@ class WikiBackup extends Command {
 			$dumpSettings['include-tables'] = $this->getTablesWithPrefix( [ $this->dbprefix ] );
 		}
 		$dumpSettings['exclude-tables'] = array_merge(
+			// If multiple instances share a DB, skip all tables with other prefixes
 			$dumpSettings['exclude-tables'] ?? [],
 			$this->getTablesWithPrefix( $this->skipDbPrefixes, true )
 		);
@@ -509,6 +512,9 @@ class WikiBackup extends Command {
 
 	protected function cleanUp() {
 		unlink( $this->tmpDumpFilepath );
+		if ( $this->isFarmContext ) {
+			unlink( $this->mediawikiRoot . '/settings.json' );
+		}
 	}
 
 	/**
@@ -562,7 +568,8 @@ class WikiBackup extends Command {
 
 	/**
 	 * @param array $prefixes
-	 * @param bool $includeViews
+	 * @param bool $includeViews If we are getting tables to backup, we don't want views, but if we are getting
+	 * tables to skip, we want views
 	 * @return array
 	 */
 	private function getTablesWithPrefix( array $prefixes, bool $includeViews = false ): array {
