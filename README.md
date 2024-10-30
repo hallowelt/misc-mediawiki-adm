@@ -99,11 +99,11 @@ main (`w`) wiki database, as that DB holds information on all instances.
 
 Commands are the same as for single wiki, but additional parameters in `profile.json` are required
 - Set all parameters as if backing up/restoring the main farm wiki (`w`, management instance)
-- Add section `farm-options` that has following items
+- Add section `bluespice-farm-options` that has following items
 
 ```
 {
-    "farm-options": {
+    "bluespice-farm-options": {
         "instances-dir": "/var/www/w/_sf_instance",
         "instance-name": "wiki-name"
     }
@@ -130,7 +130,7 @@ with `profile.json`:
 			"dbname": "w"
 		}
 	},  
-    "farm-options": {
+    "bluespice-farm-options": {
         "instance-name": "*"
     }
 }
@@ -146,7 +146,7 @@ Since instance settings are stored in DB, when backing up, extra file `filesyste
 which is then used on restore.
 
 When restoring a farm instance, profile file __must__ be used, with `db-options.connection` set
-to the main wiki database. Optionally, set `farm-options.instances-dir` to the root directory that holds instances.
+to the main wiki database. Optionally, set `bluespice-farm-options.instances-dir` to the root directory that holds instances.
 
 ```json
 {
@@ -158,7 +158,7 @@ to the main wiki database. Optionally, set `farm-options.instances-dir` to the r
 			"dbname": "w"
 		}
 	},
-    "farm-options": {
+    "bluespice-farm-options": {
         "instances-dir": "/path/to/instances"
     }
 }

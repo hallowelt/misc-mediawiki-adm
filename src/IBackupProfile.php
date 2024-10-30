@@ -24,7 +24,7 @@ interface IBackupProfile {
 	/**
 	 * @return array|null
 	 */
-	public function getFarmOptions(): ?array;
+	public function getBlueSpiceFarmOptions(): ?array;
 
 	/**
 	 * Key "db-options" should contain DB backup options.

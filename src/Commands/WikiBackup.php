@@ -4,7 +4,7 @@ namespace MWStake\MediaWiki\CliAdm\Commands;
 
 use DateTime;
 use Exception;
-use MWStake\MediaWiki\CliAdm\FarmInstanceSettingsManager;
+use MWStake\MediaWiki\CliAdm\BlueSpiceFarmInstanceSettingsManager;
 use MWStake\MediaWiki\CliAdm\IBackupProfile;
 use MWStake\MediaWiki\CliAdm\JSONBackupProfile;
 use MWStake\MediaWiki\CliAdm\DefaultBackupProfile;
@@ -82,7 +82,7 @@ class WikiBackup extends Command {
 	/** @var array */
 	private $skipDbPrefixes = [];
 
-	/** @var FarmInstanceSettingsManager|null */
+	/** @var BlueSpiceFarmInstanceSettingsManager|null */
 	private $farmSettingsReader = null;
 
 	/**
@@ -205,7 +205,7 @@ class WikiBackup extends Command {
 			}
 			$this->{$requiredField} = $settings[$requiredField];
 		}
-		$farmOptions = $this->profile->getFarmOptions();
+		$farmOptions = $this->profile->getBlueSpiceFarmOptions();
 		if ( $farmOptions && $farmOptions['instance-name'] ) {
 			$this->setupFarmEnvironment( $farmOptions );
 		}
@@ -232,7 +232,7 @@ class WikiBackup extends Command {
 			throw new Exception( "Could not connect to management database: " . $ex->getMessage() );
 		}
 
-		$this->farmSettingsReader = new FarmInstanceSettingsManager( $mainPdo, $settingsTable );
+		$this->farmSettingsReader = new BlueSpiceFarmInstanceSettingsManager( $mainPdo, $settingsTable );
 		if ( $this->instanceName === '*' ) {
 			$this->output->writeln( "Backing up all instances ..." );
 			// Backup all instances
