@@ -3,10 +3,8 @@
 namespace MWStake\MediaWiki\CliAdm;
 
 use PDO;
-use RecursiveIteratorIterator;
-use MWStake\MediaWiki\CliAdm\SettingsFileIterator;
 
-class FarmInstanceSettingsManager {
+class BlueSpiceFarmInstanceSettingsManager {
 
 	/**
 	 * @var PDO

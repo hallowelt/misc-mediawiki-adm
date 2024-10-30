@@ -3,7 +3,7 @@
 namespace MWStake\MediaWiki\CliAdm\Commands;
 
 use DateTime;
-use MWStake\MediaWiki\CliAdm\FarmInstanceSettingsManager;
+use MWStake\MediaWiki\CliAdm\BlueSpiceFarmInstanceSettingsManager;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
 use Symfony\Component\Console\Command\Command;
@@ -88,7 +88,7 @@ class WikiRestore extends Command {
 
 	/**
 	 *
-	 * @var FarmInstanceSettingsManager
+	 * @var BlueSpiceFarmInstanceSettingsManager
 	 */
 	private $farmSettingsManager = null;
 
@@ -302,12 +302,12 @@ class WikiRestore extends Command {
 			$mainDbConnectionOptions['dbpassword']
 		);
 		$settingsTable = ( $mainDbConnectionOptions['dbprefix' ] ?? '' ) . 'simple_farmer_instances';
-		$this->farmSettingsManager = new FarmInstanceSettingsManager( $mainPdo, $settingsTable );
+		$this->farmSettingsManager = new BlueSpiceFarmInstanceSettingsManager( $mainPdo, $settingsTable );
 		$settings = $this->farmSettingsManager->getSettingsFromFile( $instanceSettingsFile );
 		if ( !$settings ) {
 			throw new Exception( "Failed to read settings.json for farm instance" );
 		}
-		$farmOptions = $this->profile->getOptions()['farm-options'] ?? null;
+		$farmOptions = $this->profile->getOptions()['bluespice-farm-options'] ?? null;
 		$instancesDir = $farmOptions['instances-dir'] ?? $this->mediawikiRoot . '/_sf_instances';
 		$this->instanceName = $settings['path'];
 		$this->settings['dbname'] = $settings['dbname'];
