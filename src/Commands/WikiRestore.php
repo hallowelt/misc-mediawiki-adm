@@ -65,12 +65,6 @@ class WikiRestore extends Command {
 
 	/**
 	 *
-	 * @var string
-	 */
-	protected $tmpFilepath = '';
-
-	/**
-	 *
 	 * @var IRestoreProfile
 	 */
 	protected $profile = null;
@@ -151,9 +145,7 @@ class WikiRestore extends Command {
 		$this->loadProfile( $input->getOption( 'profile' ) );
 
 		$this->makeTempWorkDir( $input->getOption( 'tmp-dir' ) );
-		$this->loadSourceIntoWorkDir();
 		$this->extractSourceIntoWorkDir();
-		$this->removeSourceFromWorkDir();
 		$this->readWikiConfig();
 		$this->importFilesystem();
 		$this->importDatabase();
@@ -173,16 +165,10 @@ class WikiRestore extends Command {
 		$this->filesystem->mkdir( $this->tmpWorkingDir, 0777 );
 	}
 
-	private function loadSourceIntoWorkDir() {
-		$filename = basename( $this->srcFilepath );
-		$this->tmpFilepath = $this->tmpWorkingDir . '/' . $filename;
-		$this->output->writeln( "Loading '{$this->srcFilepath}' into '{$this->tmpFilepath}'" );
-		copy( $this->srcFilepath, $this->tmpFilepath );
-	}
-
 	private function extractSourceIntoWorkDir() {
 		$zip = new ZipArchive;
-		$success = $zip->open( $this->tmpFilepath );
+		// Open the source ZIP directly — no need to copy it into the tmp dir first.
+		$success = $zip->open( $this->srcFilepath );
 		if ( $success === true) {
 			$zip->extractTo( $this->tmpWorkingDir );
 			$zip->close();
@@ -190,10 +176,6 @@ class WikiRestore extends Command {
 		} else {
 			throw new Exception( "FAILURE extracting files" );
 		}
-	}
-
-	private function removeSourceFromWorkDir() {
-		$this->filesystem->remove( $this->tmpFilepath );
 	}
 
 	private function removeTempWorkDir() {
