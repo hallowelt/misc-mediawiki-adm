@@ -158,11 +158,23 @@ class WikiBackup extends Command {
 			$this->output->writeln( "<info> --> Backing up farm instance $this->instanceName</info>" );
 		}
 		$this->checkDatabaseConnection();
+		$destFilePath = $this->makeDestFilepath();
 		$this->initZipFile();
-		$this->addSettingsFiles();
-		$this->addImagesFolder();
-		$this->addCustomFilesAndFolders();
-		$this->dumpDatabase();
+		try {
+			$this->addSettingsFiles();
+			$this->addImagesFolder();
+			$this->addCustomFilesAndFolders();
+			$this->dumpDatabase();
+		} catch ( \Exception $e ) {
+			// Close the ZipArchive so libzip's internal temp file (e.g. somewiki.zip.XXXXXXXX)
+			// is flushed and renamed to $destFilePath — then we can safely delete it.
+			// Without this the temp file is abandoned on disk as a "fragment".
+			$this->zip->close();
+			if ( file_exists( $destFilePath ) ) {
+				unlink( $destFilePath );
+			}
+			throw $e;
+		}
 
 		$this->zip->close();
 		$this->cleanUp();
