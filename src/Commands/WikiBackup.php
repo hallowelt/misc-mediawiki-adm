@@ -425,6 +425,7 @@ class WikiBackup extends Command {
 		$this->output->writeln( "Adding 'custom-paths' ..." );
 		foreach( $toBackup as $customFile ) {
 			$localPath = preg_replace( '#^' . preg_quote( $this->mediawikiRoot ) . '#', '', $customFile );
+			$localPath = trim( $localPath, '/' );
 			$this->zip->addFile( $customFile, "filesystem/$localPath" );
 			$progressBar->advance();
 		}
