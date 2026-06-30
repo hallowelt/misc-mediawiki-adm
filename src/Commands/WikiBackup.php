@@ -182,7 +182,7 @@ class WikiBackup extends Command {
 		$this->removeOldBackups();
 	}
 
-	protected $sitename = '';
+	protected $wikiName = '';
 	protected $dbname = '';
 	protected $dbuser = '';
 	protected $dbpassword = '';
@@ -207,7 +207,7 @@ class WikiBackup extends Command {
 			'dbname', 'dbpassword', 'dbuser', 'dbserver', 'dbprefix'
 		];
 		$optionalFields = [
-			'sitename'
+			'wikiName'
 		];
 		$allFields = array_merge( $requiredFields, $optionalFields );
 
@@ -344,9 +344,9 @@ class WikiBackup extends Command {
 		if ( $this->isFarmContext ) {
 			return $this->instanceName;
 		}
-		// Use from `LocalSettings.php` if available
-		if ( !empty( $this->sitename ) ) {
-			return $this->sitename;
+		// Use $wgSitename from `LocalSettings.php` if available
+		if ( !empty( $this->wikiName ) ) {
+			return $this->wikiName;
 		}
 		$default = $this->dbname . ( $this->dbprefix ? "-{$this->dbprefix}" : '' );
 		return $this->profile->getOption( 'target-filename', $default );
