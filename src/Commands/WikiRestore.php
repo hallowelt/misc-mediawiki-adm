@@ -213,12 +213,13 @@ class WikiRestore extends Command {
 	}
 
 	private function importDatabase() {
-		$pdo = $this->makePDO();
+		$importOptions = $this->profile->getDBImportOptions();
+		$pdo = $this->makePDO( $importOptions['connection'] ?? [] );
 		$databaseImporter = new DatabaseImporter(
 			$pdo,
 			$this->input,
 			$this->output,
-			$this->profile->getDBImportOptions()
+			$importOptions
 		);
 		$dumpfilepath = "{$this->tmpWorkingDir}/database.sql";
 		$databaseImporter->importFile( $dumpfilepath );
@@ -308,13 +309,13 @@ class WikiRestore extends Command {
 	 *
 	 * @return PDO
 	 */
-	private function makePDO() {
-		$connection = [
+	private function makePDO( $connection = [] ) {
+		$connection = array_merge( [
 			'dbserver' => $this->settings['dbserver'],
 			'dbname' => $this->settings['dbname'],
 			'dbuser' => $this->settings['dbuser'],
 			'dbpassword' => $this->settings['dbpassword']
-		];
+		], $connection );
 
 		$dsn = "mysql:host={$connection['dbserver']}";
 		$pdo = new PDO( $dsn, $connection['dbuser'], $connection['dbpassword'] );
