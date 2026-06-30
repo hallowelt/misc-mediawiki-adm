@@ -75,10 +75,18 @@ class DatabaseImporter {
 	private function doImport( $pathname ) {
 		$errorDetect = false;
 		$tmpLine = '';
-		ini_set( "memory_limit", 0 );
-		$lines = file( $pathname );
-		$progressBar = new ProgressBar( $this->output, count( $lines ) );
-		foreach ($lines as $line) {
+
+		$handle = fopen( $pathname, 'r' );
+		if ( $handle === false ) {
+			throw new \RuntimeException( "Cannot open SQL file for reading: $pathname" );
+		}
+
+		// Use an indeterminate progress bar — we stream line-by-line so the total
+		// line count is not known upfront (avoids loading the whole file into RAM).
+		$progressBar = new ProgressBar( $this->output );
+		$progressBar->start();
+
+		while ( ( $line = fgets( $handle ) ) !== false ) {
 			if ( $this->isCommentLine( $line ) ) {
 				$progressBar->advance();
 				continue;
@@ -110,6 +118,9 @@ class DatabaseImporter {
 				$tmpLine = '';
 			}
 		}
+
+		fclose( $handle );
+
 		$progressBar->setMessage( 'Done.' );
 		$progressBar->finish();
 
