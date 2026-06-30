@@ -182,6 +182,7 @@ class WikiBackup extends Command {
 		$this->removeOldBackups();
 	}
 
+	protected $sitename = '';
 	protected $dbname = '';
 	protected $dbuser = '';
 	protected $dbpassword = '';
@@ -205,17 +206,21 @@ class WikiBackup extends Command {
 		$requiredFields = [
 			'dbname', 'dbpassword', 'dbuser', 'dbserver', 'dbprefix'
 		];
+		$optionalFields = [
+			'sitename'
+		];
+		$allFields = array_merge( $requiredFields, $optionalFields );
 
-		foreach( $requiredFields as $requiredField ) {
-			if ( $this->{$requiredField} ) {
+		foreach( $allFields as $field ) {
+			if ( $this->{$field} ) {
 				// Already set by the provided backup-profile
 				continue;
 			}
-			if( !isset( $settings[$requiredField] ) ) {
-				throw new \Exception( "Required information '$requiredField' "
+			if( in_array( $field, $requiredFields ) && !isset( $settings[$field] ) ) {
+				throw new \Exception( "Required information '$field' "
 						. "could not be extracted!" );
 			}
-			$this->{$requiredField} = $settings[$requiredField];
+			$this->{$field} = $settings[$field];
 		}
 		$farmOptions = $this->profile->getBlueSpiceFarmOptions();
 		if ( $farmOptions && $farmOptions['instance-name'] ) {
@@ -338,6 +343,10 @@ class WikiBackup extends Command {
 	protected function getTargetFilename() {
 		if ( $this->isFarmContext ) {
 			return $this->instanceName;
+		}
+		// Use from `LocalSettings.php` if available
+		if ( !empty( $this->sitename ) ) {
+			return $this->sitename;
 		}
 		$default = $this->dbname . ( $this->dbprefix ? "-{$this->dbprefix}" : '' );
 		return $this->profile->getOption( 'target-filename', $default );
